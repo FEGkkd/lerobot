@@ -1,0 +1,588 @@
+collection:
+  data_root: /data/dex/apple_to_blue_bowl_v1
+  stale_timeout_ms: 1000
+  status_hz: 5.0
+  receive_threads: 6
+  available_only: true
+  minimum_free_bytes: 5368709120
+streams:
+  pico_head_pose_raw:
+    topic: /pico/head_pose
+    type: geometry_msgs/msg/PoseStamped
+    enabled: true
+    selected: false
+    required: false
+    device_group: head_teleop
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  pico_head_pose:
+    topic: /teleop/head_pose
+    type: geometry_msgs/msg/PoseStamped
+    enabled: true
+    selected: false
+    required: false
+    device_group: head_teleop
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  pico_head_pose_valid:
+    topic: /teleop/head_pose_valid
+    type: std_msgs/msg/Bool
+    enabled: true
+    selected: false
+    required: false
+    device_group: head_teleop
+    readiness: publisher_present
+    qos:
+      reliability: reliable
+      durability: volatile
+      depth: 4
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  head_target_command:
+    topic: /head/target_command
+    type: head_driver/msg/HeadCommand
+    enabled: true
+    selected: false
+    required: false
+    readiness: publisher_present
+    device_group: head_teleop
+    qos:
+      reliability: reliable
+      durability: volatile
+      depth: 8
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  head_command:
+    topic: /head/command
+    type: head_driver/msg/HeadCommand
+    enabled: true
+    selected: false
+    required: false
+    readiness: publisher_present
+    device_group: head_teleop
+    qos:
+      reliability: reliable
+      durability: volatile
+      depth: 8
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  head_joint_states:
+    topic: /head/joint_states
+    type: sensor_msgs/msg/JointState
+    enabled: true
+    selected: false
+    required: false
+    device_group: head_teleop
+    qos:
+      reliability: reliable
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  head_diagnostics:
+    topic: /head/diagnostics
+    type: diagnostic_msgs/msg/DiagnosticArray
+    enabled: true
+    selected: false
+    required: false
+    readiness: publisher_present
+    device_group: head_teleop
+    qos:
+      reliability: reliable
+      durability: volatile
+      depth: 4
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  head_left_color:
+    topic: /head/left/image_raw
+    type: dex_collection_interfaces/msg/CameraFrame
+    enabled: true
+    selected: true
+    required: true
+    device_group: camera
+    queue_capacity: 8
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    max_queue_bytes: 67108864
+  head_right_color:
+    topic: /head/right/image_raw
+    type: dex_collection_interfaces/msg/CameraFrame
+    enabled: true
+    selected: false
+    required: false
+    device_group: camera
+    queue_capacity: 8
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    max_queue_bytes: 67108864
+  head_left_color_info:
+    topic: /head/left/camera_info
+    type: sensor_msgs/msg/CameraInfo
+    enabled: true
+    selected: true
+    required: false
+    device_group: camera
+    readiness: publisher_present
+    queue_capacity: 4
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 4
+    max_queue_bytes: 67108864
+  head_right_color_info:
+    topic: /head/right/camera_info
+    type: sensor_msgs/msg/CameraInfo
+    enabled: true
+    selected: false
+    required: false
+    device_group: camera
+    readiness: publisher_present
+    queue_capacity: 4
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 4
+    max_queue_bytes: 67108864
+  tianji_command:
+    topic: /tianji/joint_command
+    type: tianji_interfaces/msg/JointCommand
+    enabled: true
+    selected: true
+    required: true
+    readiness: publisher_present
+    device_group: tianji_arm
+    qos:
+      reliability: reliable
+      durability: volatile
+      depth: 8
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  tianji_state_left:
+    topic: /left_arm/joint_states
+    type: sensor_msgs/msg/JointState
+    enabled: true
+    selected: true
+    required: true
+    device_group: tianji_arm
+    qos:
+      reliability: reliable
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  tianji_state_right:
+    topic: /right_arm/joint_states
+    type: sensor_msgs/msg/JointState
+    enabled: true
+    selected: true
+    required: true
+    device_group: tianji_arm
+    qos:
+      reliability: reliable
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  tianji_robot_state:
+    topic: /tianji/robot_state
+    type: tianji_interfaces/msg/RobotState
+    enabled: true
+    selected: true
+    required: false
+    device_group: tianji_arm
+    readiness: latched_sample
+    qos:
+      reliability: reliable
+      durability: transient_local
+      depth: 1
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  tianji_safety_driver:
+    topic: /tianji_real_driver/safety
+    type: tianji_interfaces/msg/SafetyStatus
+    enabled: true
+    selected: true
+    required: false
+    device_group: tianji_arm
+    readiness: latched_sample
+    qos:
+      reliability: reliable
+      durability: transient_local
+      depth: 1
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  tianji_safety_teleop:
+    topic: /tianji/safety
+    type: tianji_interfaces/msg/SafetyStatus
+    enabled: true
+    selected: true
+    required: false
+    device_group: tianji_arm
+    readiness: latched_sample
+    qos:
+      reliability: reliable
+      durability: transient_local
+      depth: 1
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  tianji_teleop_state:
+    topic: /tianji/teleop_state
+    type: tianji_interfaces/msg/TeleopState
+    enabled: true
+    selected: true
+    required: false
+    device_group: tianji_arm
+    readiness: latched_sample
+    qos:
+      reliability: reliable
+      durability: transient_local
+      depth: 1
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  wuji_left_command:
+    topic: /left_hand/command
+    type: manus_wuji_interfaces/msg/HandCommand
+    enabled: true
+    selected: true
+    required: true
+    readiness: publisher_present
+    device_group: wuji_left
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 1
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  wuji_left_state:
+    topic: /left_hand/state
+    type: manus_wuji_interfaces/msg/HandState
+    enabled: true
+    selected: true
+    required: true
+    device_group: wuji_left
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 1
+    readiness: fresh_sample
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  wuji_left_diagnostics:
+    topic: /left_hand/diagnostics
+    type: manus_wuji_interfaces/msg/HandDiagnostics
+    enabled: true
+    selected: true
+    required: false
+    device_group: wuji_left
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  wuji_left_sim_state:
+    topic: /left_hand/sim/joint_states
+    type: manus_wuji_interfaces/msg/HandState
+    enabled: true
+    selected: false
+    required: false
+    device_group: wuji_left
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 1
+    readiness: fresh_sample
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  wuji_right_command:
+    topic: /right_hand/command
+    type: manus_wuji_interfaces/msg/HandCommand
+    enabled: true
+    selected: true
+    required: true
+    readiness: publisher_present
+    device_group: wuji_right
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 1
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  wuji_right_state:
+    topic: /right_hand/state
+    type: manus_wuji_interfaces/msg/HandState
+    enabled: true
+    selected: true
+    required: true
+    device_group: wuji_right
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 1
+    readiness: fresh_sample
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  wuji_right_diagnostics:
+    topic: /right_hand/diagnostics
+    type: manus_wuji_interfaces/msg/HandDiagnostics
+    enabled: true
+    selected: true
+    required: false
+    device_group: wuji_right
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  wuji_right_sim_state:
+    topic: /right_hand/sim/joint_states
+    type: manus_wuji_interfaces/msg/HandState
+    enabled: true
+    selected: false
+    required: false
+    device_group: wuji_right
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 1
+    readiness: fresh_sample
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  manus_left:
+    topic: /manus_glove_left
+    type: manus_ros2_msgs/msg/ManusGlove
+    enabled: true
+    selected: true
+    required: false
+    device_group: manus_left
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  manus_right:
+    topic: /manus_glove_right
+    type: manus_ros2_msgs/msg/ManusGlove
+    enabled: true
+    selected: true
+    required: false
+    device_group: manus_right
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  tracker_left_raw:
+    topic: /vive/raw/left_wrist
+    type: geometry_msgs/msg/PoseStamped
+    enabled: true
+    selected: true
+    required: false
+    device_group: tracker
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  tracker_right_raw:
+    topic: /vive/raw/right_wrist
+    type: geometry_msgs/msg/PoseStamped
+    enabled: true
+    selected: true
+    required: false
+    device_group: tracker
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  tracker_left:
+    topic: /vive/tracker/left_wrist
+    type: tianji_interfaces/msg/TrackerPose
+    enabled: true
+    selected: true
+    required: false
+    device_group: tracker
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  tracker_right:
+    topic: /vive/tracker/right_wrist
+    type: tianji_interfaces/msg/TrackerPose
+    enabled: true
+    selected: true
+    required: false
+    device_group: tracker
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  tracker_safety:
+    topic: /vive/tracker/safety_status
+    type: tianji_interfaces/msg/SafetyStatus
+    enabled: true
+    selected: true
+    required: false
+    device_group: tracker
+    readiness: latched_sample
+    qos:
+      reliability: reliable
+      durability: transient_local
+      depth: 1
+    queue_capacity: 4096
+    max_queue_bytes: 67108864
+  wrist_left_color:
+    topic: /wrist/left/color/image_raw
+    type: sensor_msgs/msg/Image
+    enabled: true
+    selected: true
+    required: true
+    device_group: camera
+    queue_capacity: 8
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    max_queue_bytes: 67108864
+  wrist_right_color:
+    topic: /wrist/right/color/image_raw
+    type: sensor_msgs/msg/Image
+    enabled: true
+    selected: true
+    required: true
+    device_group: camera
+    queue_capacity: 8
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    max_queue_bytes: 67108864
+  wrist_left_depth:
+    topic: /wrist/left/depth/image_rect_raw
+    type: sensor_msgs/msg/Image
+    enabled: true
+    selected: false
+    required: false
+    device_group: camera
+    queue_capacity: 8
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    max_queue_bytes: 67108864
+  wrist_right_depth:
+    topic: /wrist/right/depth/image_rect_raw
+    type: sensor_msgs/msg/Image
+    enabled: true
+    selected: false
+    required: false
+    device_group: camera
+    queue_capacity: 8
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 8
+    readiness: fresh_sample
+    max_queue_bytes: 67108864
+  wrist_left_color_info:
+    topic: /wrist/left/color/camera_info
+    type: sensor_msgs/msg/CameraInfo
+    enabled: true
+    selected: true
+    required: false
+    device_group: camera
+    readiness: publisher_present
+    queue_capacity: 4
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 4
+    max_queue_bytes: 67108864
+  wrist_right_color_info:
+    topic: /wrist/right/color/camera_info
+    type: sensor_msgs/msg/CameraInfo
+    enabled: true
+    selected: true
+    required: false
+    device_group: camera
+    readiness: publisher_present
+    queue_capacity: 4
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 4
+    max_queue_bytes: 67108864
+  wrist_left_depth_info:
+    topic: /wrist/left/depth/camera_info
+    type: sensor_msgs/msg/CameraInfo
+    enabled: true
+    selected: false
+    required: false
+    device_group: camera
+    readiness: publisher_present
+    queue_capacity: 4
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 4
+    max_queue_bytes: 67108864
+  wrist_right_depth_info:
+    topic: /wrist/right/depth/camera_info
+    type: sensor_msgs/msg/CameraInfo
+    enabled: true
+    selected: false
+    required: false
+    device_group: camera
+    readiness: publisher_present
+    queue_capacity: 4
+    qos:
+      reliability: best_effort
+      durability: volatile
+      depth: 4
+    max_queue_bytes: 67108864
+preview:
+  enabled: true
+  fps: 0.0
+  width: 640
+  height: 480
+  jpeg_quality: 65

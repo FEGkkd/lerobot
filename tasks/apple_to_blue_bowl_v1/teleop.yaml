@@ -1,0 +1,6 @@
+# This is an overlay for whole_body_teleop.launch.py, which first loads its
+# installed real.yaml. Preserve all motion limits, filtering and timeouts.
+whole_body_teleop:
+  ros__parameters:
+    enable_hands: true
+    head.enabled: false

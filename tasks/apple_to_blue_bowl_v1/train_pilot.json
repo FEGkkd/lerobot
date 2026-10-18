@@ -1,0 +1,25 @@
+{
+  "dataset": {
+    "repo_id": "FEGkkd/apple_to_blue_bowl_v1",
+    "root": "/data/lerobot/apple_to_blue_bowl_v1",
+    "eval_split": 0
+  },
+  "policy": {
+    "type": "act",
+    "device": "cuda",
+    "chunk_size": 30,
+    "n_action_steps": 5,
+    "push_to_hub": false
+  },
+  "batch_size": 8,
+  "steps": 5000,
+  "eval_steps": 0,
+  "env_eval_freq": 0,
+  "save_freq": 1000,
+  "wandb": {
+    "enable": false
+  },
+  "output_dir": "outputs/train/act_apple_to_blue_bowl_v1_pilot",
+  "seed": 1000
+}
+

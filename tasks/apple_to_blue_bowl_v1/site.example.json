@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "task_id": "apple_to_blue_bowl_v1",
+  "operator_name": null,
+  "ros_domain_id": null,
+  "data_root": null,
+  "apple": {
+    "id": "red_apple_01",
+    "material_or_type": null,
+    "diameter_m": null
+  },
+  "bowl": {
+    "id": "blue_bowl_01",
+    "inner_diameter_m": null,
+    "inner_depth_m": null
+  },
+  "table": {
+    "frame_description": null,
+    "height_m": null,
+    "apple_x_bounds_m": null,
+    "apple_y_bounds_m": null,
+    "bowl_center_xy_m": null
+  },
+  "prepare_pose_rad": {
+    "left_arm": null,
+    "right_arm": null,
+    "left_hand": null,
+    "right_hand": null
+  },
+  "cameras": {
+    "front": {
+      "width": 1280,
+      "height": 720,
+      "fps": 30,
+      "channels": 3
+    },
+    "left_wrist": {
+      "width": 720,
+      "height": 720,
+      "fps": 30,
+      "channels": 3
+    },
+    "right_wrist": {
+      "width": 720,
+      "height": 720,
+      "fps": 30,
+      "channels": 3
+    }
+  },
+  "verified": {
+    "camera_geometry_and_color": false,
+    "head_fixed": false,
+    "joint_order_and_radian_units": false,
+    "real_driver_configs": false,
+    "prepare_pose_reachable": false,
+    "apple_and_bowl_visible": false,
+    "storage_root_on_recording_host": false
+  },
+  "source_revisions": {
+    "lerobot": "146d8474932c8b566717eb2738ba459337ab71c4",
+    "dex_data_platform": "d86faecffd11667b91081c5f5f82cb0512b2c93b",
+    "whole_body_teleop": "a7451ad51ef3b9733e90be177eaefb7eb922f6c2"
+  }
+}
+
