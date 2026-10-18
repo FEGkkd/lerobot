@@ -21,13 +21,15 @@
 - 两个 CLI 的 --help 和任务契约校验通过；未实测 site 模板按预期拒绝通过。
 - collection.yaml 的全部 QoS、队列、预览设置和源话题继承参考配置；只改变选择、required、输出根目录示例与保留空间。
 
+- 新增专项 GitHub Actions 已在 Linux/Python 3.12 上通过：代码提交 `acdc869316cf7e65e110e3fbebd0eecef20cd81e` 的 [PR 检查](https://github.com/FEGkkd/lerobot/actions/runs/39118570390)与 [push 检查](https://github.com/FEGkkd/lerobot/actions/runs/39118563016)均成功，包含 18 项测试、Ruff 和任务契约校验。该项补充仅更新验证文档；其他仓库通用检查以 PR 的实时结果为准。
+
 ## 尚未执行
 
 - ROS 2 Jazzy 上 live preflight 的消息反序列化、QoS、状态观察与计时（当前本地主机为 Windows，未启动 ROS 图）。
 - 现场物体/容器测量、图像布局与颜色确认、真实 SDK 单位及准备姿态确认。
 - 实机驱动/相机吞吐、曝光时间与接收时间偏差、写盘负载、机器人运动与停止表现。
 - 真实 MCAP 的逐样本解码/转换、LeRobot 数据集加载、ACT 训练或部署。
-- 新增 GitHub Actions workflow 的远端运行结果（以实际 Actions 结果为准）。
+
 
 ROS 证据范围：接口/配置为 L0 静态核对，纯数据逻辑为 L1 离线测试；没有宣称 L3 ROS 图验证或 L4–L6 硬件验证。报告通过只代表注明范围内的数据检查，不是运动安全认证。
 
