@@ -1,0 +1,41 @@
+name: Apple collection preparation
+
+on:
+  pull_request:
+    paths:
+      - tasks/apple_to_blue_bowl_v1/**
+      - examples/tianji_wuji_collection/**
+      - .github/workflows/apple-collection.yml
+  push:
+    paths:
+      - tasks/apple_to_blue_bowl_v1/**
+      - examples/tianji_wuji_collection/**
+      - .github/workflows/apple-collection.yml
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      # Match the action revisions already pinned by this repository.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          python-version: "3.12"
+      - name: Offline contract tests (no ROS or hardware)
+        run: >-
+          uv run --no-project --with pyyaml==6.0.3 python -m unittest discover
+          -s examples/tianji_wuji_collection -p 'test_*.py' -v
+      - name: Python lint
+        run: >-
+          uv run --no-project --with ruff==0.14.1 ruff check
+          examples/tianji_wuji_collection
+      - name: Python formatting
+        run: >-
+          uv run --no-project --with ruff==0.14.1 ruff format --check
+          examples/tianji_wuji_collection
+      - name: Validate task contract
+        run: >-
+          uv run --no-project python examples/tianji_wuji_collection/collection_tools.py validate
