@@ -13,21 +13,22 @@
   "retain_container_on_failure_minutes": 0,
   "automatic_retry": false,
   "image": "docker.sii.shaipower.online/base/ngc-cuda:12.8.0-devel-ubuntu22.04",
-  "image_status": "Official base image verified selectable. Prepared environment compatibility and a saved project image are still pending.",
+  "image_status": "Official base image verified selectable. Runtime uses a SHA256-checked offline Ubuntu package bundle on the shared disk; clean-container verification is pending. The personal image export failed with a cgroup freeze timeout and must not be selected.",
   "compute_group_id": "lcg-a91ad10b-415d-4abd-8170-828a2feae5d2",
   "compute_group_name": "开发区-H200-3号机房",
   "quota_id": "79fe954a-be92-4772-ac0b-94ad8a79b7bb",
   "resource_validation": "Verified selectable in DLC on 2026-10-27: 1 H200 141GB, 20 CPU cores, 200GB RAM, 1 point/hour, one node, priority 4. Group showed 8 GPUs available at inspection; this is not a reservation or a guarantee of immediate scheduling.",
   "preparation_instance_id": "145d6a18-effe-426a-bb95-b112a0307509",
   "preparation_instance_name": "fengenguang-groot-prepare",
-  "image_requirement": "Prepared Linux x86_64 project image with Python 3.12, uv, repository uv.lock extras groot/training, TensorBoard 2.20.0 and the same persistent mounted paths. Lockfile uses torch 2.11.0+cu128 and transformers 5.5.4.",
+  "image_requirement": "Use the verified official CUDA 12.8 Ubuntu 22.04 image as root. bootstrap_system_offline.sh installs the prepared apt-cache/*.deb bundle after checking SHA256SUMS, without network access. Python 3.12.14, uv and the locked groot/training environment plus TensorBoard 2.20.0 are on the same persistent mounted paths. Lockfile uses torch 2.11.0+cu128 and transformers 5.5.4.",
+  "offline_system_bundle": "apt-cache/SHA256SUMS",
   "proposed_work_root": "/inspire/hdd/project/roboticsystem2/jianghaoran-253208120274/fengenguang/tianji_wuji",
   "proposed_code_root": "/inspire/hdd/project/roboticsystem2/jianghaoran-253208120274/fengenguang/tianji_wuji/code/lerobot",
   "command": "export TIANJI_WORK_ROOT=/inspire/hdd/project/roboticsystem2/jianghaoran-253208120274/fengenguang/tianji_wuji; cd \"$TIANJI_WORK_ROOT/code/lerobot\"; bash examples/tianji_wuji/h200_smoke/run_h200.sh",
   "remaining_before_submission": [
     "Verify the reviewed code checkout on the actual account-mounted shared-disk directory.",
     "Prepare assets and the Linux environment on an Internet-enabled preparation machine; Hugging Face access to Cosmos is required.",
-    "Choose and verify an actual 1-H200 compute group/quota and prepared image.",
+    "Verify the official base image plus offline system bundle and persistent Python environment in a fresh CPU container.",
     "Obtain user confirmation before submitting the task to the queue."
   ]
 }

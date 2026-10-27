@@ -67,11 +67,21 @@ uv run --no-sync hf auth login
 bash examples/tianji_wuji/h200_smoke/prepare_online.sh
 ```
 
-模型下载会检查固定 SHA，并准备骨干加载器使用的离线缓存引用。若远端模型 main 改变，脚本会停止，要求复核版本。准备机需有 Python 3.12；保存依赖环境和系统库到项目镜像，或验证共享盘 `.venv` 在目标镜像内可用。不要把登录 Token 打进镜像。
+模型下载会检查固定 SHA，并准备骨干加载器使用的离线缓存引用。若远端模型 main 改变，脚本会停止，要求复核版本。准备机使用 Python 3.12.14；依赖环境、Python 本体、权重和数据都在共享盘。不要把登录 Token 打进镜像。
+
+若 PyPI 下载缓慢，可先只通过平台内源安装环境：
+
+```bash
+bash examples/tianji_wuji/h200_smoke/prepare_online.sh --internal-mirror --environment-only
+```
+
+此方式从原始 `uv.lock` 导出版本和哈希。普通包通过平台内源下载并校验原哈希；Torch、torchvision 和 TorchCodec 使用锁文件里的原始官方 wheel URL 与哈希。不能把所有包混合交给 PyTorch 索引解析：该索引也提供某些普通包的不同构建，同版本不保证哈希相同。`preparation/environment-sources.json` 保存实际选择。
 
 `job_spec.json` 是平台填写清单。2026-10-27 已在分布式训练表单确认可选规格：开发区-H200-3号机房，`lcg-a91ad10b-415d-4abd-8170-828a2feae5d2`；单卡 quota `79fe954a-be92-4772-ac0b-94ad8a79b7bb`，20 核 CPU、200GB 内存、H200 141GB，1 点券/小时。节点数 1、普通优先级 4。检查时组内显示 8 张可用，仅为实时快照，没有预留资源。
 
-官方基础镜像已确认可选：`docker.sii.shaipower.online/base/ngc-cuda:12.8.0-devel-ubuntu22.04`。这是基础镜像，不能直接宣称已含可训练环境；需要完成联网准备、核验共享盘 Python 3.12 环境与系统库，并保存项目镜像。CPU 准备实例为 `fengenguang-groot-prepare`（4 核 / 16GB、零 GPU、4 小时自动停止），不运行训练。TensorBoard 2.20.0 使用 `setuptools==80.9.0` 保留其依赖的 `pkg_resources`。
+官方基础镜像已确认可选：`docker.sii.shaipower.online/base/ngc-cuda:12.8.0-devel-ubuntu22.04`。平台导出个人镜像时发生容器 cgroup 冻结超时，该失败镜像不能使用。任务改用官方镜像与共享盘上的离线系统包：`apt-cache/*.deb` 和 `apt-cache/SHA256SUMS`。这些包由准备机的 Ubuntu 签名软件源取得；启动时 `bootstrap_system_offline.sh` 校验哈希，再以容器 root 用户离线安装 Git、FFmpeg 等运行库，不访问包仓库。须先在新的 CPU 容器中验证这一组合；实际 GPU 运行仍待之后获准提交的 H200 验证任务。
+
+CPU 准备实例为 `fengenguang-groot-prepare`（4 核 / 16GB、零 GPU、4 小时自动停止），不运行训练。TensorBoard 2.20.0 使用 `setuptools==80.9.0` 保留其依赖的 `pkg_resources`。
 
 启动命令：
 

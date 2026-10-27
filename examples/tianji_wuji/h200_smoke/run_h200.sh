@@ -27,6 +27,7 @@ mkdir -p "$job_root/logs"
 exec > >(tee -a "$job_root/logs/console.log") 2>&1
 echo "Job root: $job_root"
 echo "Task: one H200, partial finetuning, 100 optimizer updates; restart at 50"
+bash examples/tianji_wuji/h200_smoke/bootstrap_system_offline.sh
 nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv > "$job_root/gpu.csv"
 uv run --no-sync python examples/tianji_wuji/h200_smoke/preflight.py \
   --work-root "$TIANJI_WORK_ROOT" --job-root "$job_root"
