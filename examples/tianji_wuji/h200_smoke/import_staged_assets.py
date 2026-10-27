@@ -73,6 +73,8 @@ def main() -> None:
                 ref = folder.parent.parent / "refs/main"
                 if ref.read_text().strip() != entry["revision"]:
                     raise ValueError("Offline model ref does not match the pinned revision")
+                # huggingface_hub reads refs verbatim when resolving revision='main'.
+                ref.write_text(entry["revision"])
                 assets["models"][entry["repo"]] = {"revision": entry["revision"], "path": str(folder)}
         pending = work / "assets.import-pending.json"
         pending.write_text(json.dumps(assets, indent=2) + "\n")

@@ -37,7 +37,10 @@ def main() -> None:
         cached = Path(
             hf_hub_download(repo, "config.json", revision=revision, local_files_only=True)
         ).resolve()
-        if cached != (snapshot / "config.json").resolve():
+        cached_main = Path(
+            hf_hub_download(repo, "config.json", revision="main", local_files_only=True)
+        ).resolve()
+        if cached != (snapshot / "config.json").resolve() or cached_main != cached:
             raise ValueError(f"Offline cache resolved a different snapshot: {repo}")
         keys = set()
         files = list(snapshot.glob("*.safetensors"))

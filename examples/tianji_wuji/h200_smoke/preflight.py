@@ -49,7 +49,7 @@ def main() -> None:
         if model["revision"] != revision or not (Path(model["path"]) / "config.json").is_file():
             raise ValueError(f"Missing or wrong pinned model: {repo_id}")
         ref = work / "hf/hub" / ("models--" + repo_id.replace("/", "--")) / "refs/main"
-        if ref.read_text().strip() != revision:
+        if ref.read_text() != revision:
             raise ValueError(f"Offline model ref changed: {repo_id}")
     import torch
 

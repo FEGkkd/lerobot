@@ -2,6 +2,8 @@
 
 本目录基于 `FEGkkd/lerobot` 的 `codex/tianji-wuji-groot-n17-bag-batter` 分支，源提交为 `9c3dbbd3203ce0d1192ad9150e90f2901f29dd94`。用户已确认验证任务配置；尚未提交 H200 训练，也尚未运行 GPU 验证。
 
+2026-10-27 已在实际共享盘准备完整数据、GR00T 与 Cosmos 固定版本权重及 Python 环境。离线缓存、权重分片/哈希、Cosmos 预处理器、数据划分和统计检查通过；CPU 运行时与 15 项 CPU 测试通过。当前等待用户明确确认后才提交单卡 H200 的 100 次更新验证任务。
+
 ## 数据划分
 
 固定数据为 `fegkkd/bag_v3@e82d64b44deff9dc4d42c149e6048010a5427ccd`。
