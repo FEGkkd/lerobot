@@ -3,11 +3,13 @@ set -euo pipefail
 : "${TIANJI_WORK_ROOT:?Set a writable directory on the /inspire shared disk}"
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 cd "$repo_root"
+export PATH="$TIANJI_WORK_ROOT/tools/bootstrap/bin:$PATH"
+export UV_PYTHON_INSTALL_DIR="$TIANJI_WORK_ROOT/tools/python"
 export HF_HOME="$TIANJI_WORK_ROOT/hf"
 export HF_HUB_CACHE="$HF_HOME/hub"
 export UV_CACHE_DIR="$TIANJI_WORK_ROOT/uv-cache"
 export HF_HUB_DISABLE_TELEMETRY=1
-uv sync --locked --extra groot --extra training --extra test
+uv sync --locked --python 3.12.14 --extra groot --extra training --extra test
 uv pip install --python .venv/bin/python 'tensorboard==2.20.0' 'setuptools==80.9.0'
 uv run --no-sync python examples/tianji_wuji/h200_smoke/prepare_assets.py --work-root "$TIANJI_WORK_ROOT"
 uv run --no-sync python examples/tianji_wuji/h200_smoke/prepare_splits.py \

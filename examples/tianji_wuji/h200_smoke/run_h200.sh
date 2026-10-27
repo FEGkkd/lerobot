@@ -5,6 +5,8 @@ export TIANJI_JOB_ID="${TIANJI_JOB_ID:-tianji-h200-smoke100-$(date +%Y%m%d-%H%M%
 [[ "$TIANJI_JOB_ID" =~ ^[a-zA-Z0-9._-]+$ ]] || { echo "Invalid job ID" >&2; exit 2; }
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 cd "$repo_root"
+export PATH="$TIANJI_WORK_ROOT/tools/bootstrap/bin:$PATH"
+export UV_PYTHON_INSTALL_DIR="$TIANJI_WORK_ROOT/tools/python"
 export HF_HOME="$TIANJI_WORK_ROOT/hf"
 export HF_HUB_CACHE="$HF_HOME/hub"
 export HUGGINGFACE_HUB_CACHE="$HF_HUB_CACHE"

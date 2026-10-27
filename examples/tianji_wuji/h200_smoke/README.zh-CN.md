@@ -60,7 +60,9 @@ H200 空间没有外网。先在可联网的 Linux 准备机上安装环境、�
 export TIANJI_WORK_ROOT=/inspire/hdd/project/roboticsystem2/jianghaoran-253208120274/fengenguang/tianji_wuji
 export HF_HOME="$TIANJI_WORK_ROOT/hf"
 cd "$TIANJI_WORK_ROOT/code/lerobot"
-uv sync --locked --extra groot --extra training --extra test
+export PATH="$TIANJI_WORK_ROOT/tools/bootstrap/bin:$PATH"
+export UV_PYTHON_INSTALL_DIR="$TIANJI_WORK_ROOT/tools/python"
+uv sync --locked --python 3.12.14 --extra groot --extra training --extra test
 uv run --no-sync hf auth login
 bash examples/tianji_wuji/h200_smoke/prepare_online.sh
 ```

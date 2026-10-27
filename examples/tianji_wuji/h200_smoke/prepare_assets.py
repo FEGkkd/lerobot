@@ -10,6 +10,11 @@ from prepare_splits import DATASET_REVISION, MODEL_REVISIONS
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--work-root", type=Path, required=True)
+    parser.add_argument(
+        "--public-only",
+        action="store_true",
+        help="Prepare public assets while Cosmos login is pending; does not mark assets ready.",
+    )
     args = parser.parse_args()
     root = args.work_root.resolve()
     from huggingface_hub import HfApi, snapshot_download
@@ -19,6 +24,8 @@ def main() -> None:
     snapshot_download("fegkkd/bag_v3", repo_type="dataset", revision=DATASET_REVISION, local_dir=data_root)
     models = {}
     for repo_id, revision in MODEL_REVISIONS.items():
+        if args.public_only and repo_id == "nvidia/Cosmos-Reason2-2B":
+            continue
         # Resolve main, check its pinned SHA, then download main to populate the offline ref
         # expected by the native GR00T backbone loader. Check again after download for races.
         if HfApi().model_info(repo_id, revision="main").sha != revision:
@@ -34,8 +41,12 @@ def main() -> None:
         "models": models,
     }
     root.mkdir(parents=True, exist_ok=True)
-    (root / "assets.json").write_text(json.dumps(pins, indent=2) + "\n")
-    print("Pinned dataset and both models prepared; assets.json contains their local paths.")
+    target = root / ("assets.partial.json" if args.public_only else "assets.json")
+    target.write_text(json.dumps(pins, indent=2) + "\n")
+    if args.public_only:
+        print("Public assets prepared; Cosmos is still required. assets.json has not been written.")
+    else:
+        print("Pinned dataset and both models prepared; assets.json contains their local paths.")
 
 
 if __name__ == "__main__":
