@@ -44,6 +44,10 @@ class DatasetConfig:
     episodes: list[int] | None = None
     # Episode indices to drop (e.g. corrupt or heterogeneous ones). Applied on top of `episodes`.
     exclude_episodes: list[int] | None = None
+    # Replace dataset task labels with training instructions without editing the dataset.
+    task_prompt_map: dict[str, str] = field(default_factory=dict)
+    # Features carried in the dataset but unavailable to the trained policy.
+    exclude_features: list[str] = field(default_factory=list)
     image_transforms: ImageTransformsConfig = field(default_factory=ImageTransformsConfig)
     revision: str | None = None
     use_imagenet_stats: bool = True

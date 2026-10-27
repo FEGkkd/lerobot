@@ -189,11 +189,21 @@ def _preprocess_dataset_batch(
     camera_keys: list[str],
     rename_map: dict[str, str],
     preprocessor: Any,
+    task_prompt_map: dict[str, str] | None = None,
+    exclude_features: list[str] | None = None,
 ) -> Any:
     """Prepare a raw dataset batch identically for training and held-out evaluation."""
     for cam_key in camera_keys:
         if cam_key in batch and batch[cam_key].dtype == torch.uint8:
             batch[cam_key] = batch[cam_key].to(dtype=torch.float32) / 255.0
+    if task_prompt_map and "task" in batch:
+        tasks = batch["task"]
+        if isinstance(tasks, str):
+            batch["task"] = task_prompt_map.get(tasks, tasks)
+        else:
+            batch["task"] = [task_prompt_map.get(task, task) for task in tasks]
+    for key in exclude_features or []:
+        batch.pop(key, None)
     batch = rename_batch_keys(batch, rename_map)
     return preprocessor(batch)
 
@@ -929,7 +939,14 @@ def train(cfg: TrainPipelineConfig) -> None:
         train_tracker.dataloading_s = preprocessing_start - step_start
         if image_augmentation is not None:
             batch = image_augmentation.observation(batch)
-        batch = _preprocess_dataset_batch(batch, dataset.meta.camera_keys, cfg.rename_map, preprocessor)
+        batch = _preprocess_dataset_batch(
+            batch,
+            dataset.meta.camera_keys,
+            cfg.rename_map,
+            preprocessor,
+            cfg.dataset.task_prompt_map,
+            cfg.dataset.exclude_features,
+        )
         train_tracker.preprocessing_s = time.perf_counter() - preprocessing_start
 
         train_tracker, _ = update_policy(
@@ -991,7 +1008,12 @@ def train(cfg: TrainPipelineConfig) -> None:
             with torch.no_grad(), accelerator.autocast():
                 for eval_batch in eval_dataloader:
                     eval_batch = _preprocess_dataset_batch(
-                        eval_batch, dataset.meta.camera_keys, cfg.rename_map, preprocessor
+                        eval_batch,
+                        dataset.meta.camera_keys,
+                        cfg.rename_map,
+                        preprocessor,
+                        cfg.dataset.task_prompt_map,
+                        cfg.dataset.exclude_features,
                     )
                     loss, _ = policy(eval_batch)  # __call__, so FSDP2 forward hooks run
                     eval_loss_sum += loss.item()

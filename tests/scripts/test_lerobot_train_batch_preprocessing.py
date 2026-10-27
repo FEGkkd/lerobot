@@ -44,3 +44,17 @@ def test_preprocess_dataset_batch_normalizes_and_renames_before_processor():
     assert set(processed) == {f"{OBS_IMAGES}.camera1", ACTION}
     assert processed[f"{OBS_IMAGES}.camera1"].dtype == torch.float32
     torch.testing.assert_close(processed[f"{OBS_IMAGES}.camera1"], torch.ones(1, 3, 2, 2))
+
+
+def test_preprocess_dataset_batch_maps_task_prompt_before_processor():
+    batch = {"task": ["bag_batter", "other_task"], "observation.teleop_input": torch.zeros(2, 22)}
+    processed = _preprocess_dataset_batch(
+        batch,
+        camera_keys=[],
+        rename_map={},
+        preprocessor=lambda value: value,
+        task_prompt_map={"bag_batter": "Put the drink bottle into the bag."},
+        exclude_features=["observation.teleop_input"],
+    )
+    assert processed["task"] == ["Put the drink bottle into the bag.", "other_task"]
+    assert "observation.teleop_input" not in processed

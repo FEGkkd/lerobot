@@ -587,6 +587,7 @@ def test_raw_n1_7_libero_checkpoint_processors_use_checkpoint_assets(tmp_path):
 
     assert pack_inputs.embodiment_tag == "libero_sim"
     assert pack_inputs.embodiment_mapping["libero_sim"] == 42
+    assert pack_inputs.embodiment_mapping["new_embodiment"] == 10
     assert pack_inputs.formalize_language is True
     assert pack_inputs.valid_action_horizon == 16
     assert pack_inputs.action_horizon == 40
@@ -3030,3 +3031,27 @@ def test_gr00t_n1_7_model_forward_with_mocked_backbone():
     inference_inputs = {key: value for key, value in inputs.items() if key != "action"}
     action_output = model.get_action(inference_inputs)
     assert action_output["action_pred"].shape == (2, config.action_horizon, config.max_action_dim)
+
+
+def test_groot_n1_7_pack_inputs_center_pads_mixed_resolution_views():
+    step = GrootN17PackInputsStep(
+        max_state_dim=2,
+        max_action_dim=2,
+        normalize_min_max=False,
+    )
+    transition = {
+        TransitionKey.OBSERVATION: {
+            OBS_STATE: torch.zeros(1, 2),
+            f"{OBS_IMAGES}.head_left": torch.full((1, 3, 4, 4), 1.0),
+            f"{OBS_IMAGES}.wrist_left": torch.full((1, 3, 2, 4), 1.0),
+        },
+        TransitionKey.COMPLEMENTARY_DATA: {"task": ["Put the bottle into the bag."]},
+    }
+    output = step(transition)
+    video = output[TransitionKey.OBSERVATION]["video"]
+    assert output[TransitionKey.COMPLEMENTARY_DATA]["embodiment_id"].item() == 10
+    assert video.shape == (1, 1, 2, 4, 4, 3)
+    assert (video[0, 0, 0] == 255).all()
+    assert (video[0, 0, 1, 0] == 0).all()
+    assert (video[0, 0, 1, 1:3] == 255).all()
+    assert (video[0, 0, 1, 3] == 0).all()

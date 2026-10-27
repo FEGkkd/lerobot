@@ -1,0 +1,85 @@
+{
+  "dataset": {
+    "repo_id": "fegkkd/bag_batter_head_stereo_640",
+    "root": "/home/ubuntu/MANUS_STEAMVR_ws/data_process/datasets/lerobot_bag_batter_head_stereo_640",
+    "video_backend": "pyav",
+    "task_prompt_map": {
+      "bag_batter": "Put the drink bottle into the bag."
+    },
+    "exclude_features": [
+      "observation.teleop_input"
+    ]
+  },
+  "policy": {
+    "type": "groot",
+    "device": "cuda",
+    "base_model_path": "nvidia/GR00T-N1.7-3B",
+    "embodiment_tag": "new_embodiment",
+    "chunk_size": 16,
+    "n_action_steps": 16,
+    "use_relative_actions": false,
+    "use_bf16": true,
+    "push_to_hub": false,
+    "input_features": {
+      "observation.state": {
+        "type": "STATE",
+        "shape": [
+          54
+        ]
+      },
+      "observation.images.head_left": {
+        "type": "VISUAL",
+        "shape": [
+          3,
+          640,
+          640
+        ]
+      },
+      "observation.images.head_right": {
+        "type": "VISUAL",
+        "shape": [
+          3,
+          640,
+          640
+        ]
+      },
+      "observation.images.wrist_left": {
+        "type": "VISUAL",
+        "shape": [
+          3,
+          480,
+          640
+        ]
+      },
+      "observation.images.wrist_right": {
+        "type": "VISUAL",
+        "shape": [
+          3,
+          480,
+          640
+        ]
+      }
+    }
+  },
+  "batch_size": 1,
+  "steps": 30000,
+  "seed": 42,
+  "num_workers": 4,
+  "prefetch_factor": 2,
+  "persistent_workers": true,
+  "accelerator": {
+    "gradient_accumulation": {
+      "steps": 4
+    }
+  },
+  "output_dir": "outputs/train/tianji_wuji_groot_n17_bag_batter",
+  "job_name": "tianji_wuji_bag_batter_groot_n17",
+  "save_checkpoint": true,
+  "save_freq": 5000,
+  "log_freq": 20,
+  "env_eval_freq": 0,
+  "eval_steps": 0,
+  "wandb": {
+    "enable": false
+  }
+}

@@ -199,7 +199,12 @@ def _load_n1_7_checkpoint_processor_assets(config: GrootConfig) -> _GrootN17Chec
         modality_config=modality_config,
         use_relative_action=use_relative_action,
     )
-    embodiment_mapping = _load_n1_7_embodiment_mapping(checkpoint_path) or dict(N1_7_EMBODIMENT_MAPPING)
+    # Raw checkpoints list trained embodiments but may omit the reserved new_embodiment
+    # tag. Retain LeRobot's default ID for that tag while honoring checkpoint IDs.
+    embodiment_mapping = {
+        **N1_7_EMBODIMENT_MAPPING,
+        **(_load_n1_7_embodiment_mapping(checkpoint_path) or {}),
+    }
     formalize_language = processor_kwargs.get("formalize_language", True)
     if not isinstance(formalize_language, bool):
         formalize_language = True
@@ -1813,6 +1818,26 @@ class GrootN17PackInputsStep(ProcessorStep):
         img_keys = self._ordered_image_keys(obs)
         if img_keys:
             cams = [_align_video_horizon(_to_uint8_np_bthwc(obs[k]), self.video_horizon) for k in img_keys]
+            # Center-pad mixed-resolution camera views before stacking. This preserves
+            # the native aspect ratio until the VLM image transform resizes them.
+            max_h = max(cam.shape[2] for cam in cams)
+            max_w = max(cam.shape[3] for cam in cams)
+            cams = [
+                np.pad(
+                    cam,
+                    (
+                        (0, 0),
+                        (0, 0),
+                        ((max_h - cam.shape[2]) // 2, (max_h - cam.shape[2] + 1) // 2),
+                        ((max_w - cam.shape[3]) // 2, (max_w - cam.shape[3] + 1) // 2),
+                        (0, 0),
+                    ),
+                    mode="constant",
+                )
+                if cam.shape[2:4] != (max_h, max_w)
+                else cam
+                for cam in cams
+            ]
             video = np.stack(cams, axis=2)  # (B, T, V, H, W, C)
             obs["video"] = video
             image_keys_to_remove = [key for key in obs if key.startswith(OBS_IMAGES)]
