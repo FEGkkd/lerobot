@@ -2,7 +2,11 @@
   "status": "resource_verified_assets_preparing_not_submitted",
   "project": "端到端具身智能系统2.0",
   "space": "分布式训练空间",
-  "gpu": {"model": "H200", "memory_gb": 141, "count": 1},
+  "gpu": {
+    "model": "H200",
+    "memory_gb": 141,
+    "count": 1
+  },
   "nodes": 1,
   "requested_cpu_cores": 20,
   "requested_ram_gb": 200,
@@ -13,7 +17,7 @@
   "retain_container_on_failure_minutes": 0,
   "automatic_retry": false,
   "image": "docker.sii.shaipower.online/base/ngc-cuda:12.8.0-devel-ubuntu22.04",
-  "image_status": "Official base image verified selectable. Runtime uses a SHA256-checked offline Ubuntu package bundle on the shared disk; clean-container verification is pending. The personal image export failed with a cgroup freeze timeout and must not be selected.",
+  "image_status": "Official base image verified selectable. A fresh zero-GPU CPU container passed the checksummed offline Ubuntu package installation, actual typed-config parsing, GR00T imports, native video decoding and TensorBoard write/read on 2026-10-27. GPU execution remains untested. The personal image export failed with a cgroup freeze timeout and must not be selected.",
   "compute_group_id": "lcg-a91ad10b-415d-4abd-8170-828a2feae5d2",
   "compute_group_name": "开发区-H200-3号机房",
   "quota_id": "79fe954a-be92-4772-ac0b-94ad8a79b7bb",
@@ -28,7 +32,7 @@
   "remaining_before_submission": [
     "Verify the reviewed code checkout on the actual account-mounted shared-disk directory.",
     "Prepare assets and the Linux environment on an Internet-enabled preparation machine; Hugging Face access to Cosmos is required.",
-    "Verify the official base image plus offline system bundle and persistent Python environment in a fresh CPU container.",
+    "Verify complete shared-disk data and both pinned model snapshots after transfer; CPU offline runtime validation has passed.",
     "Obtain user confirmation before submitting the task to the queue."
   ]
 }

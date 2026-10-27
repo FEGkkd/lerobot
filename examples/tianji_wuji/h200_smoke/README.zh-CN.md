@@ -25,7 +25,7 @@ uv run --no-sync python examples/tianji_wuji/h200_smoke/prepare_splits.py \
 
 ## 训练和恢复方式
 
-- 单节点、单张 H200 141GB；初拟 20 CPU / 200GB 内存 / 64GB 共享内存。
+- 单节点、单张 H200 141GB；20 CPU / 200GB 内存 / 64GB 共享内存。
 - 每批 1，梯度累积 1；计划总计 100 步，明确对应 100 次参数更新。
 - 冻结完整视觉语言骨干；训练投影、扩散动作头及 VL 连接模块。未启用 LoRA。
 - FP32 参数，BF16 混合精度计算，AdamW、峰值学习率 `1e-4`、余弦调度。
@@ -42,6 +42,8 @@ uv run --no-sync python examples/tianji_wuji/h200_smoke/prepare_splits.py \
 ## 联网准备和离线启动
 
 H200 空间没有外网。先在可联网的 Linux 准备机上安装环境、下载完整数据及两个模型。使用这个分支的 `uv.lock`，不要套用原版 Isaac-GR00T 的旧依赖。当前锁定 Torch 2.11.0+cu128、Transformers 5.5.4、Accelerate 1.15.0；日志额外安装 TensorBoard 2.20.0。
+
+集群文档同时支持 CPU 资源空间联网配环境，以及 4090 联网开发。CPU 可以完成下载、安装和配置检查；需要提前验证 CUDA 运算或显存时再使用 4090。H200 的启动脚本不执行联网安装或模型下载。
 
 共享盘目录已在联网 CPU 准备实例中创建。实际持久化挂载点包含账号目录 `jianghaoran-253208120274`，不可省略；其父级本身属于临时容器文件系统。环境和两份完整 checkpoint 建议预留至少 100GB：
 
@@ -77,9 +79,13 @@ bash examples/tianji_wuji/h200_smoke/prepare_online.sh --internal-mirror --envir
 
 此方式从原始 `uv.lock` 导出版本和哈希。普通包通过平台内源下载并校验原哈希；Torch、torchvision 和 TorchCodec 使用锁文件里的原始官方 wheel URL 与哈希。不能把所有包混合交给 PyTorch 索引解析：该索引也提供某些普通包的不同构建，同版本不保证哈希相同。`preparation/environment-sources.json` 保存实际选择。
 
+`validate_cpu_environment.py` 会解析真实训练配置、导入 GR00T、实际解码测试视频，并写入和读回 TensorBoard 事件。锁定的 Decord 0.6.0 wheel 文件名标注 `py3-none`，内部 WHEEL 却标注 `cp36-cp36m`，导致 `uv pip check` 报平台警告；验证脚本只接受这一条确切的元数据问题，并要求本机原生解码成功。其他依赖错误仍会终止准备。
+
+若模型通过本机下载后上传，`import_staged_assets.py` 使用预期字节数和 SHA256 检查完整归档，再安全解包。只有两份来源清单都存在、三个仓库版本以及全部文件哈希验证通过，才会生成 `assets.json`；不传输 Hugging Face Token。
+
 `job_spec.json` 是平台填写清单。2026-10-27 已在分布式训练表单确认可选规格：开发区-H200-3号机房，`lcg-a91ad10b-415d-4abd-8170-828a2feae5d2`；单卡 quota `79fe954a-be92-4772-ac0b-94ad8a79b7bb`，20 核 CPU、200GB 内存、H200 141GB，1 点券/小时。节点数 1、普通优先级 4。检查时组内显示 8 张可用，仅为实时快照，没有预留资源。
 
-官方基础镜像已确认可选：`docker.sii.shaipower.online/base/ngc-cuda:12.8.0-devel-ubuntu22.04`。平台导出个人镜像时发生容器 cgroup 冻结超时，该失败镜像不能使用。任务改用官方镜像与共享盘上的离线系统包：`apt-cache/*.deb` 和 `apt-cache/SHA256SUMS`。这些包由准备机的 Ubuntu 签名软件源取得；启动时 `bootstrap_system_offline.sh` 校验哈希，再以容器 root 用户离线安装 Git、FFmpeg 等运行库，不访问包仓库。须先在新的 CPU 容器中验证这一组合；实际 GPU 运行仍待之后获准提交的 H200 验证任务。
+官方基础镜像已确认可选：`docker.sii.shaipower.online/base/ngc-cuda:12.8.0-devel-ubuntu22.04`。平台导出个人镜像时发生容器 cgroup 冻结超时，该失败镜像不能使用。任务改用官方镜像与共享盘上的离线系统包：`apt-cache/*.deb` 和 `apt-cache/SHA256SUMS`。这些包由准备机的 Ubuntu 签名软件源取得；启动时 `bootstrap_system_offline.sh` 校验哈希，再以容器 root 用户通过绝对归档路径及本地 APT 缓存安装 Git、FFmpeg 等运行库，禁止下载。2026-10-27 已在新的零 GPU CPU 容器中完成系统依赖安装，以及配置解析、GR00T 导入、原生视频解码和 TensorBoard 写入读取。实际 GPU 运行仍待之后获准提交的 H200 验证任务。
 
 CPU 准备实例为 `fengenguang-groot-prepare`（4 核 / 16GB、零 GPU、4 小时自动停止），不运行训练。TensorBoard 2.20.0 使用 `setuptools==80.9.0` 保留其依赖的 `pkg_resources`。
 
@@ -160,4 +166,4 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 uv run --no-sync pytest \
   --confcutdir=examples/tianji_wuji/h200_smoke/tests -q
 ```
 
-本地没有本项目 GPU 运行环境，完整 LeRobot typed-config/模型加载、TensorBoard 真实写入和 H200 恢复训练由待提交任务执行；本地 CPU 测试成功不表示 GPU 任务已经成功。
+集群 CPU 容器已通过真实 typed-config 解析、策略模块导入、视频解码与 TensorBoard 写入读取。完整模型加载、CUDA 计算和 H200 恢复训练仍由待提交任务执行；CPU 检查成功不表示 GPU 任务已经成功。
