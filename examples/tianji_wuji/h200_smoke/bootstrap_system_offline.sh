@@ -17,8 +17,9 @@ bundle="$TIANJI_WORK_ROOT/apt-cache"
   packages=(./*.deb)
   ((${#packages[@]} > 0)) || { echo "The runtime bundle is empty." >&2; exit 2; }
   export DEBIAN_FRONTEND=noninteractive
-  dpkg --unpack "${packages[@]}"
-  dpkg --configure -a
+  # APT orders Pre-Depends (including python3-minimal) before their consumers.
+  # Every archive is supplied locally; --no-download prevents repository access.
+  apt-get --no-download --no-install-recommends --yes install "${packages[@]}"
 )
 command -v git
 command -v ffmpeg
