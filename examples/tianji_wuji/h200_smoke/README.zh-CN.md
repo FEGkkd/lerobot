@@ -1,6 +1,6 @@
 # 单卡 H200：100 次参数更新的部分微调验证
 
-本目录基于 `FEGkkd/lerobot` 的 `codex/tianji-wuji-groot-n17-bag-batter` 分支，源提交为 `9c3dbbd3203ce0d1192ad9150e90f2901f29dd94`。这是待审核的任务配置；尚未提交集群，也尚未运行 GPU 验证。
+本目录基于 `FEGkkd/lerobot` 的 `codex/tianji-wuji-groot-n17-bag-batter` 分支，源提交为 `9c3dbbd3203ce0d1192ad9150e90f2901f29dd94`。用户已确认验证任务配置；尚未提交 H200 训练，也尚未运行 GPU 验证。
 
 ## 数据划分
 
@@ -43,10 +43,10 @@ uv run --no-sync python examples/tianji_wuji/h200_smoke/prepare_splits.py \
 
 H200 空间没有外网。先在可联网的 Linux 准备机上安装环境、下载完整数据及两个模型。使用这个分支的 `uv.lock`，不要套用原版 Isaac-GR00T 的旧依赖。当前锁定 Torch 2.11.0+cu128、Transformers 5.5.4、Accelerate 1.15.0；日志额外安装 TensorBoard 2.20.0。
 
-建议共享盘目录如下，尚未在集群创建，须先确认具有写权限；环境和两份完整 checkpoint 建议预留至少 100GB：
+共享盘目录已在联网 CPU 准备实例中创建。实际持久化挂载点包含账号目录 `jianghaoran-253208120274`，不可省略；其父级本身属于临时容器文件系统。环境和两份完整 checkpoint 建议预留至少 100GB：
 
 ```text
-/inspire/hdd/project/roboticsystem2/fengenguang/tianji_wuji/
+/inspire/hdd/project/roboticsystem2/jianghaoran-253208120274/fengenguang/tianji_wuji/
   code/lerobot/                  # 包含本次修改的代码
   datasets/bag_v3/               # 固定版本数据及视频
   hf/                           # 模型缓存
@@ -57,7 +57,7 @@ H200 空间没有外网。先在可联网的 Linux 准备机上安装环境、�
 准备机上设置 `HF_HOME` 后，在同一环境中完成有 Cosmos 权限的 HF 登录，无需发送 Token 给他人：
 
 ```bash
-export TIANJI_WORK_ROOT=/inspire/hdd/project/roboticsystem2/fengenguang/tianji_wuji
+export TIANJI_WORK_ROOT=/inspire/hdd/project/roboticsystem2/jianghaoran-253208120274/fengenguang/tianji_wuji
 export HF_HOME="$TIANJI_WORK_ROOT/hf"
 cd "$TIANJI_WORK_ROOT/code/lerobot"
 uv sync --locked --extra groot --extra training --extra test
@@ -67,10 +67,14 @@ bash examples/tianji_wuji/h200_smoke/prepare_online.sh
 
 模型下载会检查固定 SHA，并准备骨干加载器使用的离线缓存引用。若远端模型 main 改变，脚本会停止，要求复核版本。准备机需有 Python 3.12；保存依赖环境和系统库到项目镜像，或验证共享盘 `.venv` 在目标镜像内可用。不要把登录 Token 打进镜像。
 
-`job_spec.json` 是平台填写清单。当前平台计算组/项目请求失败，尚不能锁定单卡 quota 和镜像 ID。只选真正支持单卡 H200 的组，节点数 1；不要用八卡规格运行本脚本。启动命令：
+`job_spec.json` 是平台填写清单。2026-10-27 已在分布式训练表单确认可选规格：开发区-H200-3号机房，`lcg-a91ad10b-415d-4abd-8170-828a2feae5d2`；单卡 quota `79fe954a-be92-4772-ac0b-94ad8a79b7bb`，20 核 CPU、200GB 内存、H200 141GB，1 点券/小时。节点数 1、普通优先级 4。检查时组内显示 8 张可用，仅为实时快照，没有预留资源。
+
+官方基础镜像已确认可选：`docker.sii.shaipower.online/base/ngc-cuda:12.8.0-devel-ubuntu22.04`。这是基础镜像，不能直接宣称已含可训练环境；需要完成联网准备、核验共享盘 Python 3.12 环境与系统库，并保存项目镜像。CPU 准备实例为 `fengenguang-groot-prepare`（4 核 / 16GB、零 GPU、4 小时自动停止），不运行训练。TensorBoard 2.20.0 使用 `setuptools==80.9.0` 保留其依赖的 `pkg_resources`。
+
+启动命令：
 
 ```bash
-export TIANJI_WORK_ROOT=/inspire/hdd/project/roboticsystem2/fengenguang/tianji_wuji
+export TIANJI_WORK_ROOT=/inspire/hdd/project/roboticsystem2/jianghaoran-253208120274/fengenguang/tianji_wuji
 export TIANJI_JOB_ID=tianji-h200-smoke100-001
 cd "$TIANJI_WORK_ROOT/code/lerobot"
 bash examples/tianji_wuji/h200_smoke/run_h200.sh
@@ -109,6 +113,14 @@ uv run --no-sync tensorboard --logdir "$JOB/train/logs/tensorboard" --host 127.0
 ```
 
 通过平台端口转发或 SSH 隧道查看 6006，保持本地绑定。
+
+Windows 本机也可以读取这些事件文件。通过平台项目文件下载完整的 `tensorboard` 目录，复制到本机日志目录后运行 TensorBoard；保留事件文件名，恢复训练新增的事件文件也一起同步。需要安装 `tensorboard==2.20.0` 和 `setuptools==80.9.0`。示例：
+
+```powershell
+python -m tensorboard.main --logdir C:\training-logs\tianji_wuji --host 127.0.0.1 --port 6006
+```
+
+打开 `http://127.0.0.1:6006`。本机服务只显示已经同步的事件；下载一次不会持续更新。如已建立 SSH 连接，可在共享盘准备机运行上面的远端 TensorBoard，再以 `ssh -N -L 6006:127.0.0.1:6006 <准备机SSH配置名>` 实时转发，具体连接名须在 SSH 配置完成后确定。当前尚未启动训练，因此没有真实训练曲线。
 
 ## 重点看什么
 
