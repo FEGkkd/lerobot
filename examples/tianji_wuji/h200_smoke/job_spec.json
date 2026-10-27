@@ -1,5 +1,5 @@
 {
-  "status": "prepared_awaiting_user_submission_confirmation",
+  "status": "authorized_pending_4090_validation",
   "project": "端到端具身智能系统2.0",
   "space": "分布式训练空间",
   "gpu": {
@@ -30,7 +30,7 @@
   "proposed_code_root": "/inspire/hdd/project/roboticsystem2/jianghaoran-253208120274/fengenguang/tianji_wuji/code/lerobot",
   "command": "export TIANJI_WORK_ROOT=/inspire/hdd/project/roboticsystem2/jianghaoran-253208120274/fengenguang/tianji_wuji; cd \"$TIANJI_WORK_ROOT/code/lerobot\"; bash examples/tianji_wuji/h200_smoke/run_h200.sh",
   "remaining_before_submission": [
-    "Obtain explicit user confirmation before submitting the single-H200 100-update partial-finetuning validation task."
+    "Pass three real parameter updates and checkpoint validation on the 4090 development instance before submitting the authorized single-H200 100-update task."
   ],
   "offline_asset_validation": "Passed on 2026-10-27: all transferred files checked against SHA256 manifests; both model cache snapshots and safetensors headers/index, actual Cosmos processor, dataset split and training statistics verified with HF networking disabled. GPU execution has not been tested.",
   "validation_reports": [

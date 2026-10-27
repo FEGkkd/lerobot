@@ -160,6 +160,18 @@ python -m tensorboard.main --logdir C:\training-logs\tianji_wuji --host 127.0.0.
 
 NaN/Inf 指标会被写入 JSONL 并主动终止任务。GPU 分配不足、缺权重、数据哈希不符、恢复失败也会直接失败。验证集损失与之后的实机成功率应分别报告。
 
+## 4090 上的 GPU 环境验证
+
+在已准备共享盘的单卡 4090 开发机上运行：
+
+```bash
+export TIANJI_WORK_ROOT=/inspire/hdd/project/roboticsystem2/jianghaoran-253208120274/fengenguang/tianji_wuji
+cd "$TIANJI_WORK_ROOT/code/lerobot"
+bash examples/tianji_wuji/h200_smoke/run_4090_validation.sh
+```
+
+它沿用 H200 的模型、数据、batch、精度与冻结策略，执行 3 次真实参数更新并保存完整 checkpoint。100 步学习率计划保持不变，仅提前停止；环境验证不执行验证集评估。脚本检查梯度、优化器和调度器步数、参数分组、有限指标和 TensorBoard 事件后，才写入 `verification.json` 的 `passed`。日志位于共享盘 `jobs/tianji-4090-environment-<时间>/`。随后 H200 从原始预训练权重重新执行 100 步验证，不接着这 3 步训练。
+
 ## 本地测试范围
 
 CPU 测试覆盖划分互斥/完整性、训练统计哈希、拒绝错误版本与污染、工厂向训练/验证注入训练统计、日志跨进程追加、NaN 停止、恢复计数和权重检查。运行：

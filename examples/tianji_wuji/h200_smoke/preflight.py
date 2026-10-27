@@ -14,6 +14,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--work-root", type=Path, required=True)
     parser.add_argument("--job-root", type=Path, required=True)
+    parser.add_argument("--profile", choices=("h200-smoke100", "4090-environment"), default="h200-smoke100")
     args = parser.parse_args()
     work = args.work_root.resolve()
     job = args.job_root.resolve()
@@ -57,8 +58,9 @@ def main() -> None:
     from lerobot.datasets.episode_splits import load_episode_splits
 
     load_episode_splits(manifest_path, "fegkkd/bag_v3", DATASET_REVISION, 110)
-    if torch.cuda.device_count() != 1 or "H200" not in torch.cuda.get_device_name(0):
-        raise RuntimeError("This validation job requires exactly one visible H200.")
+    expected_gpu = "4090" if args.profile == "4090-environment" else "H200"
+    if torch.cuda.device_count() != 1 or expected_gpu not in torch.cuda.get_device_name(0):
+        raise RuntimeError(f"This validation job requires exactly one visible {expected_gpu}.")
     if not torch.cuda.is_bf16_supported():
         raise RuntimeError("BF16 is unavailable.")
     job.mkdir(parents=True, exist_ok=True)
@@ -66,6 +68,8 @@ def main() -> None:
     config["dataset"].update(root=str(source), split_manifest=str(manifest_path.resolve()))
     config["policy"]["base_model_path"] = assets["models"]["nvidia/GR00T-N1.7-3B"]["path"]
     config["output_dir"] = str(job / "train")
+    if args.profile == "4090-environment":
+        config.update(stop_after_steps=3, save_freq=3, eval_steps=0, job_name="tianji_wuji_4090_environment")
     target = job / "train_config.json"
     target.write_text(json.dumps(config, indent=2) + "\n")
     # Parse the actual typed schema before allocating the model.
@@ -85,7 +89,7 @@ def main() -> None:
             "safetensors",
         )
     }
-    versions.update(gpu=torch.cuda.get_device_name(0), cuda=torch.version.cuda)
+    versions.update(gpu=torch.cuda.get_device_name(0), cuda=torch.version.cuda, profile=args.profile)
     (job / "environment.json").write_text(json.dumps(versions, indent=2) + "\n")
     result = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True)
     (job / "code_revision.txt").write_text(result.stdout)
