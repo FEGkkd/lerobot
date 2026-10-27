@@ -83,6 +83,8 @@ bash examples/tianji_wuji/h200_smoke/prepare_online.sh --internal-mirror --envir
 
 若模型通过本机下载后上传，`import_staged_assets.py` 使用预期字节数和 SHA256 检查完整归档，再安全解包。只有两份来源清单都存在、三个仓库版本以及全部文件哈希验证通过，才会生成 `assets.json`；不传输 Hugging Face Token。
 
+随后运行 `validate_prepared_assets.py --work-root "$TIANJI_WORK_ROOT"`：禁用网络后，检查模型缓存解析、safetensors 权重头与分片索引、实际 Cosmos 预处理器，以及固定数据划分和训练统计；不分配 GPU，也不把完整模型加载进 CPU 内存。结果保存到 `preparation/offline-assets-validation.json`。
+
 `job_spec.json` 是平台填写清单。2026-10-27 已在分布式训练表单确认可选规格：开发区-H200-3号机房，`lcg-a91ad10b-415d-4abd-8170-828a2feae5d2`；单卡 quota `79fe954a-be92-4772-ac0b-94ad8a79b7bb`，20 核 CPU、200GB 内存、H200 141GB，1 点券/小时。节点数 1、普通优先级 4。检查时组内显示 8 张可用，仅为实时快照，没有预留资源。
 
 官方基础镜像已确认可选：`docker.sii.shaipower.online/base/ngc-cuda:12.8.0-devel-ubuntu22.04`。平台导出个人镜像时发生容器 cgroup 冻结超时，该失败镜像不能使用。任务改用官方镜像与共享盘上的离线系统包：`apt-cache/*.deb` 和 `apt-cache/SHA256SUMS`。这些包由准备机的 Ubuntu 签名软件源取得；启动时 `bootstrap_system_offline.sh` 校验哈希，再以容器 root 用户通过绝对归档路径及本地 APT 缓存安装 Git、FFmpeg 等运行库，禁止下载。2026-10-27 已在新的零 GPU CPU 容器中完成系统依赖安装，以及配置解析、GR00T 导入、原生视频解码和 TensorBoard 写入读取。实际 GPU 运行仍待之后获准提交的 H200 验证任务。

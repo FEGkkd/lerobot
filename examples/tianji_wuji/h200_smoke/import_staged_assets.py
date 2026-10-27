@@ -60,8 +60,12 @@ def main() -> None:
             if not folder.is_relative_to(work):
                 raise ValueError("Manifest destination escaped the work directory")
             for file in entry["files"]:
+                relative = Path(file["path"])
+                if relative.is_absolute() or ".." in relative.parts:
+                    raise ValueError("Manifest file escaped its repository")
                 target = (folder / file["path"]).resolve()
-                if not target.is_relative_to(folder) or target.stat().st_size != file["size"]:
+                # Existing HF snapshots may link to the same cache's blobs directory.
+                if not target.is_relative_to(work) or target.stat().st_size != file["size"]:
                     raise ValueError(f"Invalid staged file: {file['path']}")
                 if sha256_file(target) != file["sha256"]:
                     raise ValueError(f"Staged file checksum mismatch: {file['path']}")
