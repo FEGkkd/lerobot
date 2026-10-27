@@ -36,7 +36,7 @@ else
   uv sync --locked --python 3.12.14 --extra groot --extra training --extra test
 fi
 uv pip install --python .venv/bin/python 'tensorboard==2.20.0' 'setuptools==80.9.0' "${index_args[@]}"
-uv pip check --python .venv/bin/python
+uv run --no-sync python examples/tianji_wuji/h200_smoke/validate_cpu_environment.py --work-root "$TIANJI_WORK_ROOT"
 uv pip freeze --python .venv/bin/python > "$TIANJI_WORK_ROOT/prepared-environment.txt"
 if "$environment_only"; then
   echo "Python environment prepared. Model weights and data require separate verification."
