@@ -1,7 +1,7 @@
 {
   "dataset": {
-    "repo_id": "fegkkd/bag_batter_head_stereo_640",
-    "root": "/home/ubuntu/MANUS_STEAMVR_ws/data_process/datasets/lerobot_bag_batter_head_stereo_640",
+    "repo_id": "fegkkd/bag_v3",
+    "root": null,
     "video_backend": "pyav",
     "task_prompt_map": {
       "bag_batter": "Put the drink bottle into the bag."

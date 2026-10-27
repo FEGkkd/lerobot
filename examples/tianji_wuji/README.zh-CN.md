@@ -2,7 +2,7 @@
 
 ## 任务和数据
 
-本任务用真实双臂双手的 110 条成功演示，训练机器人把饮料瓶放入袋子。直接读取原始 LeRobot v3.0 数据集：
+本任务用真实双臂双手的 110 条成功演示，训练机器人把饮料瓶放入袋子。训练配置默认从 Hugging Face 的公开数据集 `fegkkd/bag_v3`（`v3.0` 标签）读取原始 LeRobot v3.0 数据；本机数据目录为：
 
 `/home/ubuntu/MANUS_STEAMVR_ws/data_process/datasets/lerobot_bag_batter_head_stereo_640`
 
@@ -34,13 +34,12 @@ env -u PYTHONPATH PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/pytest \
   tests/policies/groot/test_groot_n1_7.py -q
 ```
 
-在远端，先把相同的原始 v3.0 数据放到远端目录；用 `--dataset.root` 覆盖本机路径。此前上传的 `fegkkd/bag_batter` 是另一份衍生数据，不应直接替换成本配置的数据源。若模型权重已下载到本地，可用 `--policy.base_model_path` 覆盖默认的 `nvidia/GR00T-N1.7-3B`。任务标签需仍为 `bag_batter`，相机键和维度需保持一致。
+远端默认会从 `fegkkd/bag_v3` 下载数据；若已把原始 v3.0 数据放到远端目录，可用 `--dataset.root` 直接读取该目录。此前上传的 `fegkkd/bag_batter` 是另一份衍生数据，不应替换成本配置的数据源。若模型权重已下载到本地，可用 `--policy.base_model_path` 覆盖默认的 `nvidia/GR00T-N1.7-3B`。任务标签需仍为 `bag_batter`，相机键和维度需保持一致。
 
 ## 开始训练
 
 ```bash
 bash examples/tianji_wuji/train.sh \
-  --dataset.root=/path/to/lerobot_bag_batter_head_stereo_640 \
   --output_dir=/path/to/output
 ```
 
@@ -61,6 +60,7 @@ bash examples/tianji_wuji/train.sh \
 ## 已完成的验证
 
 - 原始数据检查通过：110 条 `accepted` episode、41,399 帧、无导出丢帧；全部引用的 parquet / 视频文件存在，状态和动作数值均为有限值。
+- Hugging Face 上传验证通过：38 个数据文件、2.846 GiB，远端大小与 Xet SHA-256 均匹配；LeRobot 能通过 `fegkkd/bag_v3` 的 `v3.0` 标签直接读取 110 条 episode 元数据。
 - LeRobot 数据读取器抽样解码通过：四路相机尺寸正确，状态为 54 维，动作窗口为 16×54。
 - 相关单元测试：80 项通过。真实样本经 GR00T 完整预处理后，任务语言为 `put the drink bottle into the bag`，图像编码包含 4 个视角，embodiment ID 为 10，动作有效掩码覆盖 16×54，批次中无 `observation.teleop_input`。
 - 本机 RTX 5090（32GB）用 `--policy.dtype=bfloat16` 覆盖后，真实数据的 1 步训练（前向、反向、AdamW 更新）成功结束。默认 FP32 参数在这张卡上会于 AdamW 状态初始化时显存不足；有更大显存的远端 GPU 可用默认值，32GB 级别显卡可使用 BF16 参数覆盖。

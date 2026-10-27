@@ -62,11 +62,11 @@ def main() -> None:
         for chunk_index, file_index in set(zip(chunk_indices, file_indices, strict=True)):
             video_path = root / f"videos/{key}/chunk-{chunk_index:03d}/file-{file_index:03d}.mp4"
             assert video_path.is_file(), video_path
-    meta = LeRobotDatasetMetadata("fegkkd/bag_batter_head_stereo_640", root=root)
+    meta = LeRobotDatasetMetadata("fegkkd/bag_v3", root=root)
     assert set(meta.tasks.index) == {"bag_batter"}, list(meta.tasks.index)
     delta_timestamps = {"action": [i / meta.fps for i in range(16)]}
     dataset = LeRobotDataset(
-        "fegkkd/bag_batter_head_stereo_640",
+        "fegkkd/bag_v3",
         root=root,
         delta_timestamps=delta_timestamps,
         video_backend="pyav",
