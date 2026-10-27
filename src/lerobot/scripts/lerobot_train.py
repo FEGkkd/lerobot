@@ -586,6 +586,13 @@ def train(cfg: TrainPipelineConfig) -> None:
         cfg.parallelism, accelerator.num_processes, accelerator.device.type
     )
     init_logging(accelerator=accelerator)
+    local_metrics_handler = None
+    if cfg.local_metrics and is_main_process():
+        from lerobot.utils.local_metrics import configure_local_metrics
+
+        local_metrics_handler = configure_local_metrics(
+            cfg.output_dir, cfg.accelerator.gradient_accumulation.steps
+        )
 
     if is_main_process():
         logging.info(pformat(cfg.to_dict()))
@@ -668,6 +675,11 @@ def train(cfg: TrainPipelineConfig) -> None:
             peft_cli_overrides = dataclasses.asdict(cfg.peft)
             policy = policy.wrap_with_peft(peft_cli_overrides=peft_cli_overrides)
         peft_model = policy
+
+    if cfg.local_metrics and is_main_process():
+        from lerobot.utils.local_metrics import write_parameter_report
+
+        write_parameter_report(policy, cfg.output_dir)
 
     accelerator.wait_for_everyone()
 
@@ -917,9 +929,12 @@ def train(cfg: TrainPipelineConfig) -> None:
         dp_world_size=parallel_dims.dp_world_size,
     )
 
+    run_until_step = cfg.stop_after_steps if cfg.stop_after_steps is not None else cfg.steps
+    if run_until_step < step:
+        raise ValueError("stop_after_steps precedes the resumed checkpoint.")
     if is_main_process():
         progbar = tqdm(
-            total=cfg.steps - step,
+            total=run_until_step - step,
             desc="Training",
             unit="step",
             disable=inside_slurm(),
@@ -930,7 +945,7 @@ def train(cfg: TrainPipelineConfig) -> None:
             f"Start offline training on a fixed dataset, with effective batch size: {effective_batch_size}"
         )
 
-    for _ in range(step, cfg.steps):
+    for _ in range(step, run_until_step):
         step_start = time.perf_counter()
         batch = next(dl_iter)
         if cfg.dataset.streaming:
@@ -975,7 +990,7 @@ def train(cfg: TrainPipelineConfig) -> None:
             progbar.update(1)
         train_tracker.step()
         is_log_step = cfg.log_freq > 0 and step % cfg.log_freq == 0
-        is_saving_step = should_save_checkpoint(step, cfg.save_freq, cfg.steps)
+        is_saving_step = should_save_checkpoint(step, cfg.save_freq, run_until_step)
         is_env_eval_step = cfg.env_eval_freq > 0 and step % cfg.env_eval_freq == 0
         is_eval_step = cfg.eval_steps > 0 and step % cfg.eval_steps == 0
 
@@ -1173,6 +1188,8 @@ def train(cfg: TrainPipelineConfig) -> None:
     # Properly clean up the distributed process group
     accelerator.wait_for_everyone()
     accelerator.end_training()
+    if local_metrics_handler is not None:
+        local_metrics_handler.close()
 
 
 def _remote_target_in_argv() -> bool:

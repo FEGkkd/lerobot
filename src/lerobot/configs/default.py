@@ -48,6 +48,8 @@ class DatasetConfig:
     task_prompt_map: dict[str, str] = field(default_factory=dict)
     # Features carried in the dataset but unavailable to the trained policy.
     exclude_features: list[str] = field(default_factory=list)
+    # Explicit train/validation/test episode IDs and hashed training-only statistics.
+    split_manifest: str | None = None
     image_transforms: ImageTransformsConfig = field(default_factory=ImageTransformsConfig)
     revision: str | None = None
     use_imagenet_stats: bool = True
@@ -82,6 +84,12 @@ class DatasetConfig:
     eval_split: float = 0.0
 
     def __post_init__(self) -> None:
+        if self.split_manifest and (
+            self.streaming or self.eval_split or self.episodes is not None or self.exclude_episodes
+        ):
+            raise ValueError(
+                "split_manifest requires map-style data and cannot be combined with other episode selectors."
+            )
         if self.repo_type not in ("dataset", "bucket"):
             raise ValueError(f"repo_type must be 'dataset' or 'bucket', got {self.repo_type!r}")
         if self.eval_split != 0.0 and self.streaming:

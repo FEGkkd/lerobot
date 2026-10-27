@@ -1,0 +1,29 @@
+{
+  "status": "prepared_locally_not_submitted",
+  "project": "端到端具身智能系统2.0",
+  "space": "分布式训练空间",
+  "gpu": {"model": "H200", "memory_gb": 141, "count": 1},
+  "nodes": 1,
+  "requested_cpu_cores": 20,
+  "requested_ram_gb": 200,
+  "shared_memory_gb": 64,
+  "priority": 4,
+  "max_running_minutes": 120,
+  "retain_container_on_success_minutes": 0,
+  "retain_container_on_failure_minutes": 0,
+  "automatic_retry": false,
+  "image": null,
+  "compute_group_id": null,
+  "quota_id": null,
+  "resource_validation": "Pending: cluster resource/project requests failed during the read-only check. Select a compute group that exposes a 1-H200 quota; do not allocate an 8-GPU quota for this script.",
+  "image_requirement": "Prepared Linux x86_64 project image with Python 3.12, uv, repository uv.lock extras groot/training, TensorBoard 2.20.0 and the same persistent mounted paths. Lockfile uses torch 2.11.0+cu128 and transformers 5.5.4.",
+  "proposed_work_root": "/inspire/hdd/project/roboticsystem2/fengenguang/tianji_wuji",
+  "proposed_code_root": "/inspire/hdd/project/roboticsystem2/fengenguang/tianji_wuji/code/lerobot",
+  "command": "export TIANJI_WORK_ROOT=/inspire/hdd/project/roboticsystem2/fengenguang/tianji_wuji; cd \"$TIANJI_WORK_ROOT/code/lerobot\"; bash examples/tianji_wuji/h200_smoke/run_h200.sh",
+  "remaining_before_submission": [
+    "Create and verify the personal shared-disk directory and upload the reviewed code changes.",
+    "Prepare assets and the Linux environment on an Internet-enabled preparation machine; Hugging Face access to Cosmos is required.",
+    "Choose and verify an actual 1-H200 compute group/quota and prepared image.",
+    "Obtain user confirmation before submitting the task to the queue."
+  ]
+}

@@ -1,0 +1,2 @@
+# Preserve the exact bytes of hashed split/statistics artifacts across Windows and Linux.
+* text eol=lf

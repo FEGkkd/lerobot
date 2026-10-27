@@ -15,6 +15,7 @@
 # limitations under the License.
 import logging
 import math
+from copy import deepcopy
 from pprint import pformat
 from typing import Literal, cast
 
@@ -27,6 +28,8 @@ from lerobot.transforms import ImageTransforms
 from lerobot.utils.constants import ACTION, IMAGENET_STATS, OBS_IMAGE, OBS_PREFIX, OBS_STATE, REWARD
 
 from .dataset_metadata import LeRobotDatasetMetadata
+from .episode_splits import load_episode_splits
+from .io_utils import cast_stats_to_numpy
 from .lerobot_dataset import LeRobotDataset
 from .multi_dataset import MultiLeRobotDataset
 from .storage import DEFAULT_STORAGE_FORMAT, is_bucket_root, load_dataset_metadata
@@ -232,24 +235,37 @@ def make_train_eval_datasets(
     """
     full_dataset = make_dataset(cfg)
 
-    if cfg.dataset.eval_split == 0.0:
+    if cfg.dataset.eval_split == 0.0 and not cfg.dataset.split_manifest:
         return full_dataset, None
 
     base_episodes = (
         full_dataset.episodes if full_dataset.episodes is not None else list(range(full_dataset.num_episodes))
     )
 
-    episode_tasks = full_dataset.meta.episodes["tasks"]
-    task_to_episodes: dict[str, list[int]] = {}
-    for ep_idx in base_episodes:
-        task_key = episode_tasks[ep_idx][0] if episode_tasks[ep_idx] else ""
-        task_to_episodes.setdefault(task_key, []).append(ep_idx)
-
-    train_episodes, eval_episodes = [], []
-    for eps in task_to_episodes.values():
-        n_eval = math.ceil(len(eps) * cfg.dataset.eval_split)
-        train_episodes.extend(eps[: len(eps) - n_eval])
-        eval_episodes.extend(eps[len(eps) - n_eval :])
+    train_stats = None
+    if cfg.dataset.split_manifest:
+        splits, raw_stats = load_episode_splits(
+            cfg.dataset.split_manifest, cfg.dataset.repo_id, cfg.dataset.revision, full_dataset.num_episodes
+        )
+        train_episodes, eval_episodes = splits["train"], splits["validation"]
+        train_stats = cast_stats_to_numpy(raw_stats)
+        logger.info(
+            "Explicit split: %d train / %d validation / %d untouched test episodes",
+            len(train_episodes),
+            len(eval_episodes),
+            len(splits["test"]),
+        )
+    else:
+        episode_tasks = full_dataset.meta.episodes["tasks"]
+        task_to_episodes: dict[str, list[int]] = {}
+        for ep_idx in base_episodes:
+            task_key = episode_tasks[ep_idx][0] if episode_tasks[ep_idx] else ""
+            task_to_episodes.setdefault(task_key, []).append(ep_idx)
+        train_episodes, eval_episodes = [], []
+        for eps in task_to_episodes.values():
+            n_eval = math.ceil(len(eps) * cfg.dataset.eval_split)
+            train_episodes.extend(eps[: len(eps) - n_eval])
+            eval_episodes.extend(eps[len(eps) - n_eval :])
 
     if not train_episodes:
         raise ValueError(
@@ -258,7 +274,7 @@ def make_train_eval_datasets(
 
     logger.info(
         f"Train/eval split: {len(train_episodes)} train, {len(eval_episodes)} eval "
-        f"(eval_split={cfg.dataset.eval_split}, {len(task_to_episodes)} tasks)"
+        f"(eval_split={cfg.dataset.eval_split})"
     )
 
     delta_timestamps = resolve_delta_timestamps(cfg.trainable_config, full_dataset.meta, cfg.rename_map)
@@ -301,8 +317,10 @@ def make_train_eval_datasets(
         video_decoder_cache_size=cfg.dataset.video_decoder_cache_size,
     )
 
-    if cfg.dataset.use_imagenet_stats:
-        for ds in (train_dataset, eval_dataset):
+    for ds in (train_dataset, eval_dataset):
+        if train_stats is not None:
+            ds.meta.stats = deepcopy(train_stats)
+        if cfg.dataset.use_imagenet_stats:
             for key in ds.meta.camera_keys:
                 if key in ds.meta.depth_keys:
                     continue

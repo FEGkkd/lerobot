@@ -38,6 +38,8 @@ env -u PYTHONPATH PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/pytest \
 
 ## 开始训练
 
+单卡 H200 的固定数据划分、100 次参数更新、恢复验证和日志配置见 [H200 验证任务](h200_smoke/README.zh-CN.md)。
+
 ```bash
 bash examples/tianji_wuji/train.sh \
   --output_dir=/path/to/output
@@ -55,7 +57,7 @@ bash examples/tianji_wuji/train.sh \
   --output_dir=/path/to/smoke-output
 ```
 
-默认训练 30,000 个优化步骤、每卡批量 1、梯度累积 4，使用 GR00T 的优化器和余弦学习率预设，每 5,000 步保存一次。默认冻结语言骨干和视觉塔，训练投影层、扩散动作头及 VL 层。显存及训练速度取决于远端 GPU；可通过同名命令行参数覆盖。模型加载可能需要访问 Hugging Face 的 GR00T N1.7 和 Cosmos-Reason2-2B 权重。
+默认训练 30,000 个微批次、每卡批量 1、梯度累积 4，约对应 7,500 次参数更新。使用 GR00T 的优化器和余弦学习率预设，每 5,000 个微批次保存一次。有效 batch 为卡数 × 1 × 4；改变卡数会改变总训练样本量。默认冻结语言骨干和视觉塔，训练投影层、扩散动作头及 VL 层。显存及训练速度取决于远端 GPU；可通过同名命令行参数覆盖。模型加载可能需要访问 Hugging Face 的 GR00T N1.7 和 Cosmos-Reason2-2B 权重。
 
 ## 已完成的验证
 
