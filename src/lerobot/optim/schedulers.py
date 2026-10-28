@@ -106,6 +106,25 @@ class ConstantWithWarmupSchedulerConfig(LRSchedulerConfig):
         return LambdaLR(optimizer, lr_lambda, -1)
 
 
+@LRSchedulerConfig.register_subclass("continuation_constant")
+@dataclass
+class ContinuationConstantSchedulerConfig(LRSchedulerConfig):
+    """Restart warmup at an explicit global update while retaining Adam/RNG state."""
+
+    num_warmup_steps: int = 500
+    start_step: int = 30_000
+
+    def factor(self, current_step: int) -> float:
+        if self.start_step < 0 or self.num_warmup_steps < 1:
+            raise ValueError("Continuation requires a nonnegative start and positive warmup")
+        return min(1.0, max(0, current_step - self.start_step + 1) / self.num_warmup_steps)
+
+    def build(self, optimizer: Optimizer, num_training_steps: int) -> LambdaLR:
+        if num_training_steps <= self.start_step:
+            raise ValueError("Continuation horizon must exceed its source checkpoint")
+        return LambdaLR(optimizer, self.factor, -1)
+
+
 @LRSchedulerConfig.register_subclass("cosine_annealing_with_warmup")
 @dataclass
 class CosineAnnealingWithWarmupSchedulerConfig(LRSchedulerConfig):

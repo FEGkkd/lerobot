@@ -1,0 +1,59 @@
+{
+  "status": "user_authorized_pending_tests_sync_and_submission",
+  "project": "\u7aef\u5230\u7aef\u5177\u8eab\u667a\u80fd\u7cfb\u7edf2.0",
+  "space": "\u5206\u5e03\u5f0f\u8bad\u7ec3\u7a7a\u95f4",
+  "gpu": {
+    "model": "H200",
+    "memory_gb": 141,
+    "count": 1
+  },
+  "nodes": 1,
+  "requested_cpu_cores": 20,
+  "requested_ram_gb": 200,
+  "shared_memory_gb": 64,
+  "priority": 4,
+  "max_running_minutes": 720,
+  "retain_container_on_success_minutes": 0,
+  "retain_container_on_failure_minutes": 0,
+  "automatic_retry": false,
+  "image": "docker.sii.shaipower.online/base/ngc-cuda:12.8.0-devel-ubuntu22.04",
+  "image_status": "Official image and batch4 verified in completed30000-update H200 run",
+  "compute_group_id": "lcg-a91ad10b-415d-4abd-8170-828a2feae5d2",
+  "compute_group_name": "\u5f00\u53d1\u533a-H200-3\u53f7\u673a\u623f",
+  "quota_id": "79fe954a-be92-4772-ac0b-94ad8a79b7bb",
+  "image_requirement": "Reuse SHA256-verified offline Ubuntu packages, shared Python3.12.14 runtime and pinned model/data cache.",
+  "offline_system_bundle": "apt-cache/SHA256SUMS",
+  "proposed_work_root": "/inspire/hdd/project/roboticsystem2/jianghaoran-253208120274/fengenguang/tianji_wuji",
+  "proposed_code_root": "/inspire/hdd/project/roboticsystem2/jianghaoran-253208120274/fengenguang/tianji_wuji/code/lerobot",
+  "command": "export TIANJI_WORK_ROOT=/inspire/hdd/project/roboticsystem2/jianghaoran-253208120274/fengenguang/tianji_wuji; cd \"$TIANJI_WORK_ROOT/code/lerobot\"; bash examples/tianji_wuji/h200_continue/run_h200.sh",
+  "training": {
+    "source_job": "tianji-h200-formal-v1-20261028-143520",
+    "source_update": 30000,
+    "total_update_cap": 300000,
+    "physical_batch_size": 4,
+    "gradient_accumulation": 1,
+    "lr": 1e-05,
+    "scheduler": "500update restart warmup then constant",
+    "target_train_loss_mean": 0.001,
+    "moving_window_updates": 1000,
+    "phase_updates": 5000,
+    "validation_every_updates": 1000,
+    "validation_frames": 4242,
+    "save_every_updates": 5000,
+    "retain_all_checkpoints": true,
+    "minimum_free_gib_per_phase": 60,
+    "stop_file": "STOP_AFTER_PHASE"
+  },
+  "estimate": {
+    "single_platform_job_limit_hours": 12,
+    "graceful_script_budget_hours": 11.5,
+    "automatic_platform_resubmission": false,
+    "observed_prior_update_seconds": 0.3000353149953298,
+    "observed_full_validation_seconds": 223.14556,
+    "estimated_5000update_phase_minutes": [
+      35,
+      50
+    ],
+    "unmeasured": "Number of updates needed to reach training loss0.001; no guarantee"
+  }
+}
