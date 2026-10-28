@@ -8,6 +8,10 @@ import statistics
 import subprocess
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from lerobot.configs.train import TrainPipelineConfig
 
 START = 30_000
 HORIZON = 300_000
@@ -16,6 +20,19 @@ LR = 1e-5
 WARMUP = 500
 TARGET = 0.001
 SOURCE_JOB = "tianji-h200-formal-v1-20261028-143520"
+
+
+def load_resume_config(config_path: Path) -> "TrainPipelineConfig":
+    """Register the policy in this process before decoding a checkpoint recipe."""
+    from lerobot.configs.train import TrainPipelineConfig
+    from lerobot.policies import GrootConfig
+
+    typed = TrainPipelineConfig.from_pretrained(config_path.parent)
+    if not isinstance(typed.policy, GrootConfig):
+        raise TypeError("Expected the registered GR00T policy configuration")
+    if typed.scheduler.type != "continuation_constant" or typed.batch_size != 4:
+        raise ValueError("Typed continuation recipe differs")
+    return typed
 
 
 def read(path: Path):
@@ -244,11 +261,7 @@ def main() -> None:
         check=True,
     )
     # Parse the staged typed schema too; the preflight config itself is a provenance snapshot.
-    from lerobot.configs.train import TrainPipelineConfig
-
-    typed = TrainPipelineConfig.from_pretrained(resume_config.parent)
-    if typed.scheduler.type != "continuation_constant" or typed.batch_size != 4:
-        raise ValueError("Typed continuation recipe differs")
+    load_resume_config(resume_config)
     started, previous_phase_seconds = time.monotonic(), 2400.0
     report = None
     reason = "step_cap"

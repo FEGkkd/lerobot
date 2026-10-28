@@ -1,6 +1,8 @@
 """Exercise real Adam/RNG checkpoint continuation and the moving-loss gate on CPU."""
 
 import importlib.util
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -13,6 +15,44 @@ SPEC = importlib.util.spec_from_file_location(
 )
 recipe = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(recipe)
+
+
+def test_resume_config_registers_groot_in_a_fresh_process(tmp_path):
+    """A successful preflight child must not hide a missing parent-process registry."""
+    import draccus
+
+    from lerobot.configs.default import DatasetConfig
+    from lerobot.configs.train import TrainPipelineConfig
+    from lerobot.optim.schedulers import ContinuationConstantSchedulerConfig
+    from lerobot.policies import GrootConfig
+
+    config = TrainPipelineConfig(
+        dataset=DatasetConfig(repo_id="fegkkd/bag_v3"),
+        policy=GrootConfig(),
+        scheduler=ContinuationConstantSchedulerConfig(),
+        batch_size=4,
+    )
+    config_path = tmp_path / "train_config.json"
+    recipe.write(config_path, draccus.encode(config))
+    code = """
+import importlib.util
+import sys
+from pathlib import Path
+spec = importlib.util.spec_from_file_location('isolated_recipe', sys.argv[1])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+typed = module.load_resume_config(Path(sys.argv[2]))
+assert typed.policy.type == 'groot'
+assert typed.scheduler.type == 'continuation_constant'
+assert typed.batch_size == 4
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code, str(Path(recipe.__file__).resolve()), str(config_path)],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_real_adam_schedule_restore_and_following_process(tmp_path):
