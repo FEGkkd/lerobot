@@ -1,0 +1,127 @@
+{
+  "dataset": {
+    "repo_id": "fegkkd/bag_v3",
+    "revision": "e82d64b44deff9dc4d42c149e6048010a5427ccd",
+    "root": null,
+    "video_backend": "pyav",
+    "return_uint8": true,
+    "split_manifest": "examples/tianji_wuji/h200_smoke/splits/split_manifest.json",
+    "task_prompt_map": {
+      "bag_batter": "Put the drink bottle into the bag."
+    },
+    "exclude_features": [
+      "observation.teleop_input"
+    ]
+  },
+  "policy": {
+    "type": "groot",
+    "device": "cuda",
+    "base_model_path": "nvidia/GR00T-N1.7-3B",
+    "embodiment_tag": "new_embodiment",
+    "chunk_size": 16,
+    "n_action_steps": 16,
+    "use_relative_actions": false,
+    "use_bf16": true,
+    "dtype": "float32",
+    "tune_llm": false,
+    "tune_visual": false,
+    "tune_top_llm_layers": 0,
+    "tune_projector": true,
+    "tune_diffusion_model": true,
+    "tune_vlln": true,
+    "optimizer_lr": 5e-05,
+    "push_to_hub": false,
+    "input_features": {
+      "observation.state": {
+        "type": "STATE",
+        "shape": [
+          54
+        ]
+      },
+      "observation.images.head_left": {
+        "type": "VISUAL",
+        "shape": [
+          3,
+          640,
+          640
+        ]
+      },
+      "observation.images.head_right": {
+        "type": "VISUAL",
+        "shape": [
+          3,
+          640,
+          640
+        ]
+      },
+      "observation.images.wrist_left": {
+        "type": "VISUAL",
+        "shape": [
+          3,
+          480,
+          640
+        ]
+      },
+      "observation.images.wrist_right": {
+        "type": "VISUAL",
+        "shape": [
+          3,
+          480,
+          640
+        ]
+      }
+    },
+    "output_features": {
+      "action": {
+        "type": "ACTION",
+        "shape": [
+          54
+        ]
+      }
+    },
+    "max_steps": 30000,
+    "warmup_ratio": 0.05
+  },
+  "batch_size": 4,
+  "steps": 30000,
+  "stop_after_steps": 1000,
+  "seed": 42,
+  "num_workers": 4,
+  "prefetch_factor": 2,
+  "persistent_workers": true,
+  "accelerator": {
+    "mixed_precision": "bf16",
+    "gradient_accumulation": {
+      "steps": 1
+    }
+  },
+  "output_dir": "outputs/train/tianji_wuji_h200_formal",
+  "job_name": "tianji_wuji_h200_partial_baseline_v1",
+  "save_checkpoint": true,
+  "save_freq": 5000,
+  "log_freq": 10,
+  "eval_steps": 1000,
+  "max_eval_samples": 0,
+  "env_eval_freq": 0,
+  "local_metrics": true,
+  "wandb": {
+    "enable": false
+  },
+  "use_policy_training_preset": false,
+  "optimizer": {
+    "type": "adamw",
+    "lr": 5e-05,
+    "betas": [
+      0.9,
+      0.999
+    ],
+    "eps": 1e-08,
+    "weight_decay": 1e-05,
+    "grad_clip_norm": 1.0
+  },
+  "scheduler": {
+    "type": "diffuser",
+    "name": "cosine",
+    "num_warmup_steps": 1500
+  }
+}

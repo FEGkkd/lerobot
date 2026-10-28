@@ -1,0 +1,79 @@
+{
+  "status": "user_authorized_pending_code_sync_and_submission",
+  "project": "\u7aef\u5230\u7aef\u5177\u8eab\u667a\u80fd\u7cfb\u7edf2.0",
+  "space": "\u5206\u5e03\u5f0f\u8bad\u7ec3\u7a7a\u95f4",
+  "gpu": {
+    "model": "H200",
+    "memory_gb": 141,
+    "count": 1
+  },
+  "nodes": 1,
+  "requested_cpu_cores": 20,
+  "requested_ram_gb": 200,
+  "shared_memory_gb": 64,
+  "priority": 4,
+  "max_running_minutes": 720,
+  "retain_container_on_success_minutes": 0,
+  "retain_container_on_failure_minutes": 0,
+  "automatic_retry": false,
+  "image": "docker.sii.shaipower.online/base/ngc-cuda:12.8.0-devel-ubuntu22.04",
+  "image_status": "Official base and offline system bundle passed H200100-update training2026-10-28; batch4 is not GPU-tested.",
+  "compute_group_id": "lcg-a91ad10b-415d-4abd-8170-828a2feae5d2",
+  "compute_group_name": "\u5f00\u53d1\u533a-H200-3\u53f7\u673a\u623f",
+  "quota_id": "79fe954a-be92-4772-ac0b-94ad8a79b7bb",
+  "image_requirement": "Reuse SHA256-verified offline Ubuntu packages, shared Python3.12.14 runtime and pinned model/data cache.",
+  "offline_system_bundle": "apt-cache/SHA256SUMS",
+  "proposed_work_root": "/inspire/hdd/project/roboticsystem2/jianghaoran-253208120274/fengenguang/tianji_wuji",
+  "proposed_code_root": "/inspire/hdd/project/roboticsystem2/jianghaoran-253208120274/fengenguang/tianji_wuji/code/lerobot",
+  "command": "export TIANJI_WORK_ROOT=/inspire/hdd/project/roboticsystem2/jianghaoran-253208120274/fengenguang/tianji_wuji; cd \"$TIANJI_WORK_ROOT/code/lerobot\"; bash examples/tianji_wuji/h200_formal/run_h200.sh",
+  "training": {
+    "physical_batch_size": 4,
+    "gradient_accumulation": 1,
+    "optimizer_updates": 30000,
+    "effective_batch_size": 4,
+    "examples_consumed": 120000,
+    "train_frames": 32910,
+    "nominal_frame_passes": 3.6463081130355515,
+    "lr": 5e-05,
+    "warmup_updates": 1500,
+    "scheduler": "cosine_to_zero",
+    "validation_every_updates": 1000,
+    "validation_windows": 4242,
+    "full_checkpoint_updates": [
+      1000,
+      5000,
+      10000,
+      15000,
+      20000,
+      25000,
+      30000
+    ],
+    "best_selection": "minimum held-out loss among these7 saved checkpoints",
+    "start_weights": "original pinned pretrained model; not smoke checkpoint",
+    "validation_sample_cap": null
+  },
+  "estimate": {
+    "wall_hours": [
+      6,
+      10
+    ],
+    "queue_excluded": true,
+    "runtime_limit_hours": 12,
+    "points_per_hour": 1,
+    "estimated_points": [
+      6,
+      10
+    ],
+    "maximum_points_at_runtime_limit": 12,
+    "unmeasured": "batch4 speed/memory; calibrate after1000 real updates",
+    "checkpoint_storage_decimal_gb": 179,
+    "required_free_space_gib": 220,
+    "basis": {
+      "observed_batch1_median_update_seconds": 0.1913919789949432,
+      "linear_batch4_training_hours": 6.379732633164774,
+      "observed_validation_seconds_per32_windows": 2.7,
+      "linear_full_validation_hours": 2.98265625,
+      "note": "Batch4 throughput is unmeasured. Batch parallelism may reduce these linear estimates; loading, saving and network storage add overhead."
+    }
+  }
+}

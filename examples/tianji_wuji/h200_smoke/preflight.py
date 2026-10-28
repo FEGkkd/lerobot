@@ -14,7 +14,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--work-root", type=Path, required=True)
     parser.add_argument("--job-root", type=Path, required=True)
-    parser.add_argument("--profile", choices=("h200-smoke100", "4090-environment"), default="h200-smoke100")
+    parser.add_argument(
+        "--profile", choices=("h200-smoke100", "4090-environment", "h200-formal"), default="h200-smoke100"
+    )
+    parser.add_argument("--config", type=Path, help="Explicit training recipe (required for h200-formal)")
     args = parser.parse_args()
     work = args.work_root.resolve()
     job = args.job_root.resolve()
@@ -65,7 +68,10 @@ def main() -> None:
     if not torch.cuda.is_bf16_supported():
         raise RuntimeError("BF16 is unavailable.")
     job.mkdir(parents=True, exist_ok=True)
-    config = json.loads((Path(__file__).parent / "train_config.json").read_text())
+    if args.profile == "h200-formal" and args.config is None:
+        raise ValueError("h200-formal requires an explicit --config recipe.")
+    config_path = args.config or Path(__file__).parent / "train_config.json"
+    config = json.loads(config_path.read_text())
     config["dataset"].update(root=str(source), split_manifest=str(manifest_path.resolve()))
     config["policy"]["base_model_path"] = assets["models"]["nvidia/GR00T-N1.7-3B"]["path"]
     config["output_dir"] = str(job / "train")
@@ -103,6 +109,10 @@ def main() -> None:
     code_files.extend(
         path for path in Path(__file__).parent.rglob("*") if path.suffix in (".py", ".json", ".sh", ".md")
     )
+    if args.profile == "h200-formal":
+        code_files.extend(
+            path for path in config_path.parent.rglob("*") if path.suffix in (".py", ".json", ".sh", ".md")
+        )
     code_manifest = {str(path.resolve().relative_to(Path.cwd())): sha256_file(path) for path in code_files}
     (job / "code_manifest.json").write_text(json.dumps(code_manifest, sort_keys=True, indent=2) + "\n")
     (job / "split_manifest.json").write_bytes(manifest_path.read_bytes())
