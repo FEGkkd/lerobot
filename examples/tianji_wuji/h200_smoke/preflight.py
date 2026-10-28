@@ -7,6 +7,7 @@ import os
 import subprocess
 from pathlib import Path
 
+from code_manifest import build_code_manifest
 from prepare_splits import DATASET_REVISION, MODEL_REVISIONS, sha256_file
 
 
@@ -105,15 +106,7 @@ def main() -> None:
     (job / "working_tree.patch").write_bytes(
         subprocess.run(["git", "diff", "HEAD"], capture_output=True, check=True).stdout
     )
-    code_files = [*Path("src/lerobot").rglob("*.py"), Path("pyproject.toml"), Path("uv.lock")]
-    code_files.extend(
-        path for path in Path(__file__).parent.rglob("*") if path.suffix in (".py", ".json", ".sh", ".md")
-    )
-    if args.profile == "h200-formal":
-        code_files.extend(
-            path for path in config_path.parent.rglob("*") if path.suffix in (".py", ".json", ".sh", ".md")
-        )
-    code_manifest = {str(path.resolve().relative_to(Path.cwd())): sha256_file(path) for path in code_files}
+    code_manifest = build_code_manifest(Path.cwd(), target)
     (job / "code_manifest.json").write_text(json.dumps(code_manifest, sort_keys=True, indent=2) + "\n")
     (job / "split_manifest.json").write_bytes(manifest_path.read_bytes())
     (job / "train_stats.json").write_bytes((manifest_path.parent / "train_stats.json").read_bytes())
