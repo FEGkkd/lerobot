@@ -56,6 +56,7 @@ def main() -> None:
 
     from lerobot.configs.train import TrainPipelineConfig
     from lerobot.datasets.episode_splits import load_episode_splits
+    from lerobot.policies import GrootConfig
 
     load_episode_splits(manifest_path, "fegkkd/bag_v3", DATASET_REVISION, 110)
     expected_gpu = "4090" if args.profile == "4090-environment" else "H200"
@@ -73,7 +74,9 @@ def main() -> None:
     target = job / "train_config.json"
     target.write_text(json.dumps(config, indent=2) + "\n")
     # Parse the actual typed schema before allocating the model.
-    TrainPipelineConfig.from_pretrained(target.parent)
+    typed_config = TrainPipelineConfig.from_pretrained(target.parent)
+    if not isinstance(typed_config.policy, GrootConfig):
+        raise TypeError("Expected the registered GR00T policy configuration.")
     versions = {
         name: importlib.metadata.version(name)
         for name in (
