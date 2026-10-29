@@ -128,7 +128,9 @@ def stage_resume(source_job: Path, job: Path) -> Path:
         _last_lr=[initial_lr] * len(groups),
         last_epoch=START,
         _step_count=START + 1,
-        lr_lambdas=[None] * len(groups),
+        # The continuation factor is a bound method: LambdaLR serializes its
+        # callable state as {}, unlike the source cosine closure's None.
+        lr_lambdas=[{} for _ in groups],
     )
     write(scheduler_path, scheduler)
     write(job / "train_config.json", config)

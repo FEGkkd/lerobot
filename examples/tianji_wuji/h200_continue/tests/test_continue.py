@@ -57,6 +57,9 @@ assert typed.batch_size == 4
 
 def test_real_adam_schedule_restore_and_following_process(tmp_path):
     """Changing LR must retain the actual moment tensors and global step on restart."""
+    from lerobot.optim.optimizers import load_optimizer_state, save_optimizer_state
+    from lerobot.optim.schedulers import load_scheduler_state, save_scheduler_state
+
     p = torch.nn.Parameter(torch.tensor([1.0]))
     opt = torch.optim.AdamW([p], lr=5e-5)
     p.grad = torch.ones_like(p)
@@ -70,10 +73,13 @@ def test_real_adam_schedule_restore_and_following_process(tmp_path):
     q = torch.nn.Parameter(p.detach().clone())
     resumed = torch.optim.AdamW([q], lr=peak)
     sch = ContinuationConstantSchedulerConfig().build(resumed, 300000)
-    resumed.load_state_dict(old)
+    opt.load_state_dict(old)
+    save_optimizer_state(opt, tmp_path)
+    load_optimizer_state(resumed, tmp_path)
     state = sch.state_dict()
     state.update(last_epoch=30000, _step_count=30001, base_lrs=[peak], _last_lr=[peak / 500])
-    sch.load_state_dict(state)
+    recipe.write(tmp_path / "scheduler_state.json", state)
+    load_scheduler_state(sch, tmp_path)
     assert torch.equal(resumed.state[q]["exp_avg"], expected_moment)
     for _ in range(500):
         q.grad = torch.ones_like(q)
@@ -85,8 +91,10 @@ def test_real_adam_schedule_restore_and_following_process(tmp_path):
     next_p = torch.nn.Parameter(q.detach().clone())
     next_opt = torch.optim.AdamW([next_p], lr=peak)
     next_sch = ContinuationConstantSchedulerConfig().build(next_opt, 300000)
-    next_opt.load_state_dict(resumed.state_dict())
-    next_sch.load_state_dict(sch.state_dict())
+    save_optimizer_state(resumed, tmp_path)
+    save_scheduler_state(sch, tmp_path)
+    load_optimizer_state(next_opt, tmp_path)
+    load_scheduler_state(next_sch, tmp_path)
     next_p.grad = torch.ones_like(next_p)
     next_opt.step()
     next_sch.step()
@@ -110,7 +118,12 @@ def test_staging_does_not_edit_source_and_keeps_adam_reference(tmp_path):
             "dp_world_size": 1,
         },
     )
-    recipe.write(cp / "training_state/scheduler_state.json", {"last_epoch": 30000, "base_lrs": [5e-5]})
+    p = torch.nn.Parameter(torch.tensor([1.0]))
+    optimizer = torch.optim.AdamW([p], lr=5e-5)
+    source_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda step: 1.0)
+    source_scheduler_state = source_scheduler.state_dict()
+    source_scheduler_state.update(last_epoch=30000, _step_count=30001)
+    recipe.write(cp / "training_state/scheduler_state.json", source_scheduler_state)
     recipe.write(cp / "training_state/optimizer_param_groups.json", [{"params": [0], "lr": 0.0}])
     recipe.write(
         cp / "pretrained_model/train_config.json",
@@ -136,6 +149,22 @@ def test_staging_does_not_edit_source_and_keeps_adam_reference(tmp_path):
     staged = config.parents[1] / "training_state/optimizer_state.safetensors"
     assert staged.is_symlink()
     assert staged.resolve() == (cp / "training_state/optimizer_state.safetensors").resolve()
+    # Use the trainer's strict JSON loader, not just LambdaLR.load_state_dict.
+    from lerobot.optim.schedulers import load_scheduler_state, save_scheduler_state
+
+    resumed_optimizer = torch.optim.AdamW([p], lr=1e-5)
+    resumed_scheduler = ContinuationConstantSchedulerConfig().build(resumed_optimizer, 300000)
+    load_scheduler_state(resumed_scheduler, config.parents[1] / "training_state")
+    assert resumed_scheduler.last_epoch == 30000
+    resumed_optimizer.step()
+    resumed_scheduler.step()
+    assert resumed_optimizer.param_groups[0]["lr"] == pytest.approx(4e-8)
+    next_state = tmp_path / "next_state"
+    next_state.mkdir()
+    save_scheduler_state(resumed_scheduler, next_state)
+    following = ContinuationConstantSchedulerConfig().build(resumed_optimizer, 300000)
+    load_scheduler_state(following, next_state)
+    assert following.last_epoch == 30001
     assert before == {str(x): x.read_bytes() for x in cp.rglob("*") if x.is_file()}
     with pytest.raises(FileExistsError):
         recipe.stage_resume(source, job)
