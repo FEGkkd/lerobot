@@ -21,6 +21,9 @@ job_root="$HANDSON_WORK_ROOT/jobs/$HANDSON_JOB_ID"
 [[ ! -e "$job_root" ]] || { echo "Job directory exists; refusing duplicate start" >&2; exit 2; }
 mkdir -p "$job_root/logs"
 exec > >(tee -a "$job_root/logs/console.log") 2>&1
+if [[ "$profile" == h200 ]]; then
+  TIANJI_WORK_ROOT="$HANDSON_RUNTIME_ROOT" bash examples/tianji_wuji/h200_smoke/bootstrap_system_offline.sh
+fi
 nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv > "$job_root/gpu.csv"
 "$HANDSON_PYTHON" -m examples.handson.t46_store_charger.cluster_check preflight \
   --job-root "$job_root" --data-root "$HANDSON_WORK_ROOT/datasets/v3" \
