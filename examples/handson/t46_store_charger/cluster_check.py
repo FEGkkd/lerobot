@@ -23,6 +23,10 @@ def checkpoint_directory(run: Path, step: int) -> Path:
     return run / "checkpoints" / f"{step:0{max(6, len(str(TOTAL_STEPS)))}d}"
 
 
+def observation_only_batch(batch: dict) -> dict:
+    return {key: value for key, value in batch.items() if key.startswith("observation.") or key == "task"}
+
+
 def read(path: Path) -> dict:
     return json.loads(path.read_text())
 
@@ -237,7 +241,7 @@ def inference(job: Path) -> None:
         video_backend="pyav",
         return_uint8=True,
     )
-    batch = next(iter(DataLoader(dataset, batch_size=1, num_workers=0)))
+    batch = observation_only_batch(next(iter(DataLoader(dataset, batch_size=1, num_workers=0))))
     policy = GrootPolicy.from_pretrained(saved)
     policy.to("cuda").eval()
     pre, post = make_pre_post_processors(
@@ -246,7 +250,14 @@ def inference(job: Path) -> None:
         preprocessor_overrides={"device_processor": {"device": "cuda"}},
     )
     with torch.inference_mode():
-        action = post(policy.predict_action_chunk(pre(batch)))
+        packed = pre(batch)
+        if (
+            "action" in packed
+            or list(packed["action_mask"].shape) != [1, 16]
+            or not packed["action_mask"].all()
+        ):
+            raise ValueError("Observation-only inference must enable the full action horizon")
+        action = post(policy.predict_action_chunk(packed))
     if list(action.shape) != [1, 16, 52] or not torch.isfinite(action).all():
         raise ValueError("Restored-policy decoded absolute actions are invalid")
     write(
@@ -256,6 +267,7 @@ def inference(job: Path) -> None:
             "shape": list(action.shape),
             "device": str(action.device),
             "absolute_controller_command": True,
+            "observation_only": True,
             "source_split": "validation",
             "min": float(action.min()),
             "max": float(action.max()),

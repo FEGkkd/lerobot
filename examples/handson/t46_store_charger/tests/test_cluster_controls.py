@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from examples.handson.t46_store_charger.cluster_check import checkpoint_directory
+from examples.handson.t46_store_charger.cluster_check import checkpoint_directory, observation_only_batch
 from examples.handson.t46_store_charger.run_long import stop_reason
 
 
@@ -19,3 +19,16 @@ def test_phase_controls_preserve_manual_stop_and_resource_limits(tmp_path):
     assert stop_reason(tmp_path, 7200, 600, 59 * 1024**3) == "storage_budget"
     (tmp_path / "STOP_AFTER_PHASE").touch()
     assert stop_reason(tmp_path, 7200, 600, ample_storage) == "user_stop"
+
+
+def test_inference_observations_do_not_include_dataset_actions():
+    batch = {
+        "observation.state": [0],
+        "observation.images.front": [1],
+        "task": "store",
+        "action": [999],
+        "action_is_pad": [False],
+        "index": 3,
+    }
+    assert set(observation_only_batch(batch)) == {"observation.state", "observation.images.front", "task"}
+    assert "action" in batch

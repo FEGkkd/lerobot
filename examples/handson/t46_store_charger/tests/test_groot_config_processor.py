@@ -70,3 +70,27 @@ def test_pack_masks_padding_and_unnormalizes_absolute_52d_actions():
         crop_fraction=None,
     )
     assert resized.shape == (3, 256, 256)
+
+
+def test_observation_only_pack_enables_the_full_inference_horizon():
+    step = GrootN17PackInputsStep(
+        action_horizon=16,
+        valid_action_horizon=16,
+        max_state_dim=132,
+        max_action_dim=132,
+        normalize_min_max=False,
+    )
+    packed = step(
+        {
+            TransitionKey.OBSERVATION: {
+                "observation.state": torch.zeros(1, 52),
+                "observation.images.front": torch.zeros(1, 3, 480, 854, dtype=torch.uint8),
+                "observation.images.wrist_left": torch.zeros(1, 3, 480, 848, dtype=torch.uint8),
+                "observation.images.wrist_right": torch.zeros(1, 3, 480, 848, dtype=torch.uint8),
+            },
+            TransitionKey.COMPLEMENTARY_DATA: {"task": ["Store the charger."]},
+        }
+    )
+    mask = packed[TransitionKey.COMPLEMENTARY_DATA]["action_mask"]
+    assert mask.shape == (1, 16) and mask.all()
+    assert packed.get(TransitionKey.ACTION) is None
