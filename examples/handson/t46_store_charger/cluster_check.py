@@ -251,10 +251,13 @@ def inference(job: Path) -> None:
     )
     with torch.inference_mode():
         packed = pre(batch)
+        mask = packed["action_mask"]
         if (
             "action" in packed
-            or list(packed["action_mask"].shape) != [1, 16]
-            or not packed["action_mask"].all()
+            or mask.ndim != 2
+            or mask.shape[0] != 1
+            or mask.shape[1] < 16
+            or not (mask[:, :16] == 1).all()
         ):
             raise ValueError("Observation-only inference must enable the full action horizon")
         action = post(policy.predict_action_chunk(packed))
@@ -268,6 +271,7 @@ def inference(job: Path) -> None:
             "device": str(action.device),
             "absolute_controller_command": True,
             "observation_only": True,
+            "inference_mask_shape": list(mask.shape),
             "source_split": "validation",
             "min": float(action.min()),
             "max": float(action.max()),

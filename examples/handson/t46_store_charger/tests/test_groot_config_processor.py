@@ -94,3 +94,13 @@ def test_observation_only_pack_enables_the_full_inference_horizon():
     mask = packed[TransitionKey.COMPLEMENTARY_DATA]["action_mask"]
     assert mask.shape == (1, 16) and mask.all()
     assert packed.get(TransitionKey.ACTION) is None
+    # Some checkpoints pad beyond the 16 consumed steps; inference keeps a 2-D horizon mask.
+    step.action_horizon = 50
+    packed = step(
+        {
+            TransitionKey.OBSERVATION: {"observation.state": torch.zeros(1, 52)},
+            TransitionKey.COMPLEMENTARY_DATA: {"task": ["Store the charger."]},
+        }
+    )
+    mask = packed[TransitionKey.COMPLEMENTARY_DATA]["action_mask"]
+    assert mask.shape == (1, 50) and mask[:, :16].all() and not mask[:, 16:].any()
