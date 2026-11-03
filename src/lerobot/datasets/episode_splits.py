@@ -18,7 +18,10 @@ def load_episode_splits(
     seen: set[int] = set()
     for name in ("train", "validation", "test"):
         indices = splits[name]
-        if not indices or any(type(i) is not int or not 0 <= i < total_episodes for i in indices):
+        # Some published datasets provide only train/validation partitions.
+        if (name != "test" and not indices) or any(
+            type(i) is not int or not 0 <= i < total_episodes for i in indices
+        ):
             raise ValueError(f"Invalid or empty {name} episode partition.")
         if len(indices) != len(set(indices)) or seen.intersection(indices):
             raise ValueError("Episode partitions overlap or contain duplicates.")

@@ -1,0 +1,114 @@
+{
+  "dataset": {
+    "repo_id": "handson/t46_store_charger",
+    "revision": null,
+    "root": "/home/ubuntu/lerobot_ws/datasets/handson_t46/v3",
+    "video_backend": "pyav",
+    "return_uint8": true,
+    "split_manifest": "/home/ubuntu/lerobot_ws/datasets/handson_t46/v3/meta/split_manifest.json"
+  },
+  "policy": {
+    "type": "groot",
+    "device": "cuda",
+    "base_model_path": "nvidia/GR00T-N1.7-3B",
+    "embodiment_tag": "new_embodiment",
+    "chunk_size": 16,
+    "n_action_steps": 16,
+    "use_relative_actions": false,
+    "use_bf16": true,
+    "dtype": "float32",
+    "tune_llm": false,
+    "tune_visual": false,
+    "tune_top_llm_layers": 0,
+    "tune_projector": true,
+    "tune_diffusion_model": true,
+    "tune_vlln": true,
+    "optimizer_lr": 5e-05,
+    "push_to_hub": false,
+    "input_features": {
+      "observation.state": {
+        "type": "STATE",
+        "shape": [
+          52
+        ]
+      },
+      "observation.images.front": {
+        "type": "VISUAL",
+        "shape": [
+          3,
+          480,
+          854
+        ]
+      },
+      "observation.images.wrist_left": {
+        "type": "VISUAL",
+        "shape": [
+          3,
+          480,
+          848
+        ]
+      },
+      "observation.images.wrist_right": {
+        "type": "VISUAL",
+        "shape": [
+          3,
+          480,
+          848
+        ]
+      }
+    },
+    "output_features": {
+      "action": {
+        "type": "ACTION",
+        "shape": [
+          52
+        ]
+      }
+    },
+    "max_steps": 3,
+    "warmup_ratio": 0.05,
+    "action_decode_transform": "none"
+  },
+  "batch_size": 1,
+  "steps": 3,
+  "stop_after_steps": 3,
+  "seed": 42,
+  "num_workers": 4,
+  "prefetch_factor": 2,
+  "persistent_workers": true,
+  "accelerator": {
+    "mixed_precision": "bf16",
+    "gradient_accumulation": {
+      "steps": 1
+    }
+  },
+  "output_dir": "outputs/train/handson_t46_groot_n17_smoke",
+  "job_name": "handson_t46_groot_n17_smoke",
+  "save_checkpoint": true,
+  "save_freq": 3,
+  "log_freq": 10,
+  "eval_steps": 0,
+  "max_eval_samples": 0,
+  "env_eval_freq": 0,
+  "local_metrics": true,
+  "wandb": {
+    "enable": false
+  },
+  "use_policy_training_preset": false,
+  "optimizer": {
+    "type": "adamw",
+    "lr": 5e-05,
+    "betas": [
+      0.9,
+      0.999
+    ],
+    "eps": 1e-08,
+    "weight_decay": 1e-05,
+    "grad_clip_norm": 1.0
+  },
+  "scheduler": {
+    "type": "diffuser",
+    "name": "cosine",
+    "num_warmup_steps": 0
+  }
+}
