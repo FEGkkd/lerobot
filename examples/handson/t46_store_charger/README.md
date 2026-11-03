@@ -26,7 +26,7 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q --confcutdir=examples/handson/t46_sto
 
 本次所选原始 episode：train `8375`（128 帧）与 validation `8166`（156 帧）。完整 T46 manifest 有 270 train、30 validation。`meta/split_manifest.json` 的划分直接对应官方 split；训练统计 `meta/train_stats.json` 只取 train 轨迹，并计算精确 q01/q99。`LeRobotDataset` 使用相同的 manifest；test 分区为空，因为官方 T46 只有 train/validation。
 
-T46 的 52 维按右手 26、左手 26 排列；每侧为掌心世界系 XYZ 米 3、旋转向量弧度 3、手指关节弧度 20。动作是世界系绝对控制目标。源数据没有逐帧 padding 或 active-side 列；manifest 的双手活动和 `pose_commanded_counts` 是转换依据。完整 T46 中 4 条 train 轨迹的命令计数短于总帧数，转换器保守地只保留计数范围内的前缀，并同步截短三路视频、重算统计。发布数据没有逐步命令有效性 mask，因此在远端全量训练前应复核这 4 条的命令缺失是否都发生在尾部（原始 ID：8105、8189、8191、8218）。GR00T 的 16 步训练采样器再排除每条轨迹最后 15 个不足整块的起点；`action_is_pad` 仍在读取时产生，Processor 的动作 mask 也会屏蔽它。
+T46 的 52 维按右手 26、左手 26 排列；每侧为掌心世界系 XYZ 米 3、旋转向量弧度 3、手指关节弧度 20。动作是世界系绝对控制目标。源数据没有逐帧 padding 或 active-side 列。完整 T46 中 4 条 train 轨迹（8105、8189、8191、8218）的命令计数短于总帧数；计数无法证明缺失位于尾部，因此转换器会拒绝这些轨迹。2026-11-03 经用户确认，本次训练隔离这 4 条，使用 **266 train + 30 validation**；官方验证集保持不变，不把隔离轨迹移入其他分区。隔离 ID 和原因写入 selection 与 source provenance。GR00T 的 16 步训练采样器再排除每条轨迹最后 15 个不足整块的起点；`action_is_pad` 仍在读取时产生，Processor 的动作 mask 也会屏蔽它。
 
 `validate_dataset.py` 完整解码视频，检查 30Hz 时间戳、RGB 分辨率、52D 有限数值、episode 边界、源/v3 逐值一致、官方 split、训练 DataLoader 与 GR00T 数据打包、动作 mask、绝对动作归一化/反归一化及 256×256 图像预处理。它不会下载 GR00T/Cosmos 权重，因此不验证完整 VLM 前向或梯度更新。
 
@@ -47,12 +47,12 @@ export HF_HOME=/path/to/large-disk/hf
 export DATA_ROOT=/path/to/large-disk/handson_t46
 export RUN_ROOT=/path/to/large-disk/runs/handson_t46
 mkdir -p "$HF_HOME" "$DATA_ROOT" "$RUN_ROOT"
-python -m examples.handson.t46_store_charger.download_subset --raw-root "$DATA_ROOT/raw" --all-t46
+python -m examples.handson.t46_store_charger.download_subset --raw-root "$DATA_ROOT/raw" --all-t46 --exclude-episodes 8105 8189 8191 8218
 python -m examples.handson.t46_store_charger.prepare_dataset --raw-root "$DATA_ROOT/raw" --output "$DATA_ROOT/v3"
 python -m examples.handson.t46_store_charger.validate_dataset --raw-root "$DATA_ROOT/raw" --v3-root "$DATA_ROOT/v3"
 ```
 
-`--all-t46` 仅选择 T46 的 300 条，绝不下载全部 18,000 条。原始官方 train/validation 身份固定为 270/30，不重新随机划分。重新转换时显式加 `--force`。完整训练统计随转换重算，只用 train。建议将 `selection.json`、`meta/source_provenance.json`、`meta/split_manifest.json`、`meta/train_stats.json` 和验证报告与作业日志归档。
+`--all-t46` 仅选择 T46，绝不下载全部 18,000 条；上述隔离参数使本次选中 296 条。原始官方 train/validation 身份固定为 270/30，隔离后为 266/30，不重新随机划分。重新转换时显式加 `--force`。完整训练统计随转换重算，只用选中的 266 条 train。建议将 `selection.json`、`meta/source_provenance.json`、`meta/split_manifest.json`、`meta/train_stats.json` 和验证报告与作业日志归档。
 
 在联网准备阶段预取并固定 GR00T 主模型和 Cosmos 视觉语言骨干；下列 revision 来自本仓库已有 H200 配置，若远端改用其他正式 checkpoint，应同步固定和记录其 SHA：
 
@@ -63,7 +63,7 @@ test -f "$GROOT_PATH/config.json" && test -f "$COSMOS_PATH/config.json"
 export HF_HUB_OFFLINE=1
 ```
 
-先在 H200 上执行最多 3 次参数更新，检查真实 forward/backward、显存、优化器和 checkpoint。配置的 `base_model_path` 在命令行覆盖为已缓存本地路径：
+本次执行顺序是单张 4090 验证真实 forward/backward、显存、优化器、checkpoint 保存与恢复，通过后才排单张 H200。短测应将 `log_freq` 设为 1，记录每次更新；保持正式配置的 batch 4、2000 步调度总长度及 100 步 warmup，使用 `stop_after_steps=3` 提前停止并保存，然后恢复到第 4 次更新。下列原始 `smoke_config.json` 是 batch 1、3 步独立调度的最小启动示例，不能代替上述正式配置验证。配置的 `base_model_path` 在命令行覆盖为已缓存本地路径：
 
 ```bash
 lerobot-train --config_path=examples/handson/t46_store_charger/smoke_config.json \
@@ -91,6 +91,23 @@ cp -a "$RUN_ROOT/formal/checkpoints/001000" "$RUN_ROOT/best_validation"
 ```
 
 上述 `001000` 仅是示例，按实际最小验证 loss 替换。离线 loss 不能代表 HandsOn 闭环成功率。恢复训练请使用当前仓库的 checkpoint 恢复参数，并保持相同数据、split、统计及模型 revision；不要覆盖已有 checkpoint。
+
+## 本次集群执行与验收
+
+`run_cluster.sh` 使用独立的 `HANDSON_WORK_ROOT`，不会写旧 Tianji 数据或作业目录。运行前完成上述 296 条数据转换与完整数据校验，将 v3 放在 `$HANDSON_WORK_ROOT/datasets/v3`。`HANDSON_RUNTIME_ROOT` 只引用已有模型缓存与 `assets.json`；`HANDSON_PYTHON` 指向已有依赖环境，源码通过当前仓库的 `PYTHONPATH` 加载。
+
+```bash
+export HANDSON_WORK_ROOT=/inspire/path/to/personal/handson_t46
+export HANDSON_RUNTIME_ROOT=/inspire/path/to/personal/tianji_wuji
+export HANDSON_PYTHON=/absolute/path/to/prepared/environment/bin/python
+export HANDSON_JOB_ID=handson-t46-4090-check-UNIQUE_TIMESTAMP
+export HANDSON_PROFILE=4090
+bash examples/handson/t46_store_charger/run_cluster.sh
+```
+
+4090 测试使用正式 batch 4、2000 步调度长度、100 步 warmup；第 3 步保存，重新启动进程严格恢复到第 4 步，并重新加载保存的 Processor/模型执行一次验证集动作预测。训练和验证逐步记录；每次 loss 验证仍按原配置抽取 32 个验证样本。验收检查有限指标、Adam/scheduler 计数、冻结参数报告、两次 checkpoint 的参数变化与输出 `[1,16,52]`。这些检查通过才产生 `verification.json`，不代表闭环任务成功。
+
+通过后，由平台自动执行新的唯一 H200 作业：设 `HANDSON_PROFILE=h200`、新的 `HANDSON_JOB_ID`，并把 `HANDSON_VALIDATION_JOB` 指向通过的 4090 作业根目录。脚本会核对 GPU 型号、代码提交与工作区补丁、split/统计/完整数据验证报告 hash；不同则拒绝启动。正式训练保持 2000 步、每 500 步保存、每 100 步抽 32 样本验证。不要把抽样验证 loss 称为完整 30 条轨迹或闭环成功率。
 
 ## 后续闭环评测接口
 

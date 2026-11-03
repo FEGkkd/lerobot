@@ -66,10 +66,16 @@ def test_remap_parquet_preserves_numeric_values(tmp_path: Path):
     assert out["task_index"].to_pylist() == [0, 0]
 
 
-def test_incomplete_command_tail_is_excluded(tmp_path: Path):
-    assert (
-        valid_frames({"frames": 10, "active_sides": ["right", "left"], "pose_commanded_counts": [8, 8]}) == 8
-    )
+def test_incomplete_command_locations_are_not_assumed_to_be_a_tail(tmp_path: Path):
+    with pytest.raises(ValueError, match="counts do not establish missing-frame locations"):
+        valid_frames(
+            {
+                "episode_index": 7,
+                "frames": 10,
+                "active_sides": ["right", "left"],
+                "pose_commanded_counts": [8, 8],
+            }
+        )
     pa = pytest.importorskip("pyarrow")
     pq = pytest.importorskip("pyarrow.parquet")
     source = tmp_path / "source.parquet"
@@ -90,3 +96,33 @@ def test_incomplete_command_tail_is_excluded(tmp_path: Path):
     )
     assert remap_parquet(source, target, 0, 0, valid_length=2) == 2
     assert pq.read_table(target).num_rows == 2
+
+
+def test_quarantine_preserves_official_validation_and_source_counts():
+    task = "bench320_fu006_hold_drawer_store_charger"
+    rows = [
+        {"episode_index": 8105, "source_task": task, "split": "train", "frames": 189},
+        {"episode_index": 8375, "source_task": task, "split": "train", "frames": 128},
+        {"episode_index": 8166, "source_task": task, "split": "validation", "frames": 156},
+    ]
+    splits = {"train": [8105, 8375], "validation": [8166]}
+    selected, counts = select_episodes(rows, splits, None, None, (8105,))
+    assert counts == {"train": 2, "validation": 1}
+    assert [(r["episode_index"], r["split"]) for r in selected] == [(8375, "train"), (8166, "validation")]
+    for excluded in ((8166,), (1234,), (8105, 8105)):
+        with pytest.raises(ValueError):
+            select_episodes(rows, splits, None, None, excluded)
+
+
+def test_complete_command_coverage_is_accepted():
+    assert (
+        valid_frames(
+            {
+                "episode_index": 8375,
+                "frames": 128,
+                "active_sides": ["right", "left"],
+                "pose_commanded_counts": [128, 128],
+            }
+        )
+        == 128
+    )

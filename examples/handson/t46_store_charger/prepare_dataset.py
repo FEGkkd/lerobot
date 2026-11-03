@@ -21,6 +21,11 @@ def valid_frames(row: dict) -> int:
     counts = row["pose_commanded_counts"]
     if len(counts) != 2 or counts[0] != counts[1] or not 0 < counts[0] <= row["frames"]:
         raise ValueError(f"Unsupported command coverage in episode {row['episode_index']}: {counts}")
+    if counts != [row["frames"], row["frames"]]:
+        raise ValueError(
+            f"Incomplete command coverage in episode {row['episode_index']}; "
+            "counts do not establish missing-frame locations. Quarantine this episode."
+        )
     return counts[0]
 
 
@@ -191,6 +196,8 @@ def prepare(raw_root: Path, output: Path, force: bool = False) -> dict:
             {
                 "repo_id": selection["repo_id"],
                 "revision": selection["revision"],
+                "excluded_training_episodes": selection.get("excluded_training_episodes", []),
+                "exclusion_reason": selection.get("exclusion_reason"),
                 "policy_schema": schema,
                 "episodes": provenance,
             },
