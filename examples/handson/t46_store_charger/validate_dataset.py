@@ -9,7 +9,7 @@ import numpy as np
 import pyarrow.parquet as pq
 
 from examples.handson.t46_store_charger.download_subset import DEFAULT_ROOT, sha256
-from examples.handson.t46_store_charger.prepare_dataset import DEFAULT_OUTPUT, valid_frames
+from examples.handson.t46_store_charger.prepare_dataset import DEFAULT_OUTPUT, assigned_splits, valid_frames
 
 
 def validate_numeric_episode(table, episode_id: int, expected_frames: int) -> dict:
@@ -73,6 +73,9 @@ def validate(raw_root: Path, output: Path) -> dict:
         row["episode_index"] for row in selection["episodes"]
     ]:
         raise ValueError("episode provenance mismatch")
+    memberships = assigned_splits(selection["episodes"], tuple(provenance.get("test_sessions", [])))
+    if [row["split"] for row in provenance["episodes"]] != memberships:
+        raise ValueError("Derived session split mismatch")
     source_results = []
     raw_tables = []
     total_frames = 0
@@ -134,6 +137,9 @@ def validate(raw_root: Path, output: Path) -> dict:
     splits, stats = load_episode_splits(
         output / "meta/split_manifest.json", "handson/t46_store_charger", None, len(selection["episodes"])
     )
+    for name in ("train", "validation", "test"):
+        if splits[name] != [i for i, split in enumerate(memberships) if split == name]:
+            raise ValueError(f"Manifest split differs from session membership: {name}")
     if set(splits["train"]) & set(splits["validation"]) or "q01" not in stats["action"]:
         raise ValueError("split leakage or missing train quantiles")
     for key in ("observation.state", "action"):
@@ -168,8 +174,8 @@ def validate(raw_root: Path, output: Path) -> dict:
         return_uint8=True,
         delta_timestamps={"action": [i / 30 for i in range(16)]},
     )
-    train_length = sum(valid_frames(row) for row in selection["episodes"] if row["split"] == "train")
-    valid_length = sum(valid_frames(row) for row in selection["episodes"] if row["split"] == "validation")
+    train_length = sum(valid_frames(selection["episodes"][i]) for i in splits["train"])
+    valid_length = sum(valid_frames(selection["episodes"][i]) for i in splits["validation"])
     if (
         train.meta.total_episodes != len(selection["episodes"])
         or len(train) != train_length

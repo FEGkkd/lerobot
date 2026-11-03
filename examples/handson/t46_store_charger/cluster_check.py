@@ -15,6 +15,12 @@ MODELS = {
     "nvidia/GR00T-N1.7-3B": "2fc962b973bccdd5d8ce4f67cc63b264d6886495",
     "nvidia/Cosmos-Reason2-2B": "9ce19a195e423419c349abfc86fd07178b230561",
 }
+TOTAL_STEPS = 1_000_000
+
+
+def checkpoint_directory(run: Path, step: int) -> Path:
+    # Match LeRobot get_step_checkpoint_dir: the million-step horizon uses seven digits.
+    return run / "checkpoints" / f"{step:0{max(6, len(str(TOTAL_STEPS)))}d}"
 
 
 def read(path: Path) -> dict:
@@ -58,8 +64,8 @@ def preflight(job: Path, data: Path, assets_path: Path, profile: str) -> None:
     if sorted(provenance["excluded_training_episodes"]) != EXCLUDED:
         raise ValueError("The approved four-episode quarantine is missing")
     splits, _ = load_episode_splits(data / "meta/split_manifest.json", "handson/t46_store_charger", None, 296)
-    if [len(splits[key]) for key in ("train", "validation", "test")] != [266, 30, 0]:
-        raise ValueError("Expected 266 training and 30 unchanged validation episodes")
+    if [len(splits[key]) for key in ("train", "validation", "test")] != [238, 30, 28]:
+        raise ValueError("Expected 238 training, 30 validation and 28 held-out test episodes")
     assets = read(assets_path)
     if Path(os.environ["HF_HOME"]).resolve() != Path(assets["hf_home"]).resolve():
         raise ValueError("HF_HOME must use the prepared model cache")
@@ -75,7 +81,9 @@ def preflight(job: Path, data: Path, assets_path: Path, profile: str) -> None:
     config["policy"]["base_model_path"] = assets["models"]["nvidia/GR00T-N1.7-3B"]["path"]
     config.update(output_dir=str(job / "train"), job_name=f"handson_t46_{profile}")
     if profile == "4090":
-        config.update(stop_after_steps=3, save_freq=3, log_freq=1, eval_steps=1)
+        config.update(stop_after_steps=3, save_freq=3, log_freq=1, eval_steps=1, max_eval_samples=32)
+    else:
+        config["stop_after_steps"] = 500
     write(job / "train_config.json", config)
     typed = TrainPipelineConfig.from_pretrained(job)
     if not isinstance(typed.policy, GrootConfig):
@@ -105,8 +113,9 @@ def preflight(job: Path, data: Path, assets_path: Path, profile: str) -> None:
         {
             "revision": provenance["revision"],
             "excluded_training_episodes": EXCLUDED,
-            "train_episodes": 266,
+            "train_episodes": 238,
             "validation_episodes": 30,
+            "test_episodes": 28,
             "split_sha256": digest(data / "meta/split_manifest.json"),
             "train_stats_sha256": digest(data / "meta/train_stats.json"),
             "validation_report_sha256": digest(data / "validation_report.json"),
@@ -126,7 +135,7 @@ def preflight(job: Path, data: Path, assets_path: Path, profile: str) -> None:
 def checkpoint(run: Path, step: int) -> dict:
     from safetensors import safe_open
 
-    root = run / "checkpoints" / f"{step:06d}"
+    root = checkpoint_directory(run, step)
     state = root / "training_state"
     metadata = read(state / "training_step.json")
     if (metadata["step"], metadata["grad_accum_steps"], metadata["dp_world_size"]) != (step, 1, 1):
@@ -148,7 +157,7 @@ def checkpoint(run: Path, step: int) -> dict:
         cfg["policy"]["max_steps"],
         cfg["batch_size"],
         cfg["scheduler"]["num_warmup_steps"],
-    ) != (2000, 2000, 4, 100):
+    ) != (1000000, 1000000, 4, 100):
         raise ValueError("Formal scheduler horizon or batch changed during the test")
     return {"step": step, "adam_min": min(counters), "adam_max": max(counters), "scheduler": step}
 
@@ -161,8 +170,9 @@ def verify(job: Path, profile: str) -> None:
     records = [json.loads(line) for line in (run / "logs/metrics.jsonl").read_text().splitlines()]
     train = [row for row in records if row["event"] == "train"]
     validations = [row["optimizer_updates"] for row in records if row["event"] == "validation"]
-    expected = list(range(1, 5)) if profile == "4090" else list(range(10, 2001, 10))
-    expected_val = list(range(1, 5)) if profile == "4090" else list(range(100, 2001, 100))
+    final_step = 4 if profile == "4090" else read(job / "progress.json")["completed_updates"]
+    expected = list(range(1, 5)) if profile == "4090" else list(range(10, final_step + 1, 10))
+    expected_val = list(range(1, 5)) if profile == "4090" else list(range(100, final_step + 1, 100))
     if [row["optimizer_updates"] for row in train] != expected or validations != expected_val:
         raise ValueError("Missing or repeated training/validation metrics")
     for row in records:
@@ -174,14 +184,14 @@ def verify(job: Path, profile: str) -> None:
         raise ValueError("Partial fine-tuning freeze mismatch")
     if not list((run / "logs/tensorboard").glob("events.out.tfevents.*")):
         raise FileNotFoundError("TensorBoard event files")
-    steps = (3, 4) if profile == "4090" else (500, 1000, 1500, 2000)
+    steps = (3, 4) if profile == "4090" else tuple(range(500, final_step + 1, 500))
     checkpoints = [checkpoint(run, step) for step in steps]
-    paths = [run / "checkpoints" / f"{step:06d}/pretrained_model/model.safetensors" for step in steps]
+    paths = [checkpoint_directory(run, step) / "pretrained_model/model.safetensors" for step in steps]
     with safe_open(paths[0], framework="np") as first, safe_open(paths[-1], framework="np") as last:
         keys = list(first.keys())
         head = next(key for key in keys if "action_head" in key and key.endswith("vlln.weight"))
         frozen = next(key for key in keys if "backbone" in key and "norm" in key and key.endswith("weight"))
-        if np.array_equal(first.get_tensor(head), last.get_tensor(head)):
+        if len(paths) > 1 and np.array_equal(first.get_tensor(head), last.get_tensor(head)):
             raise ValueError("Trainable head sample did not change")
         if not np.array_equal(first.get_tensor(frozen), last.get_tensor(frozen)):
             raise ValueError("Frozen backbone sample changed")
@@ -191,7 +201,10 @@ def verify(job: Path, profile: str) -> None:
         "optimizer_updates": expected[-1],
         "checkpoints": checkpoints,
         "validation_updates": validations,
-        "validation_sample_cap": 32,
+        "validation_sample_cap": 32 if profile == "4090" else 0,
+        "validation_episodes": 30,
+        "held_out_test_episodes": 28,
+        "test_used_for_model_selection": False,
         "parameter_groups": groups,
         "updated_tensor": head,
         "unchanged_backbone_tensor": frozen,
@@ -214,7 +227,7 @@ def inference(job: Path) -> None:
     from lerobot.policies import make_pre_post_processors
     from lerobot.policies.groot.modeling_groot import GrootPolicy
 
-    saved = job / "train/checkpoints/000004/pretrained_model"
+    saved = checkpoint_directory(job / "train", 4) / "pretrained_model"
     cfg = read(saved / "train_config.json")
     splits = read(Path(cfg["dataset"]["split_manifest"]))["splits"]
     dataset = LeRobotDataset(

@@ -13,6 +13,32 @@ import pyarrow.parquet as pq
 from examples.handson.t46_store_charger.download_subset import DEFAULT_ROOT, read_jsonl, sha256
 
 DEFAULT_OUTPUT = Path("/home/ubuntu/lerobot_ws/datasets/handson_t46/v3")
+TEST_SESSION = "20260903-112559_dx_bench320_fu006_hold_drawer_store_charger"
+
+
+def assigned_splits(episodes: list[dict], test_sessions: tuple[str, ...]) -> list[str]:
+    """Hold out complete official-training sessions without moving validation episodes."""
+    requested = set(test_sessions)
+    known = {row["collection_session_id"] for row in episodes}
+    if len(requested) != len(test_sessions) or not requested <= known:
+        raise ValueError("Unknown or duplicate held-out session")
+    if any(row["split"] != "train" and row["collection_session_id"] in requested for row in episodes):
+        raise ValueError("Only official training sessions may become test data")
+    result = ["test" if row["collection_session_id"] in requested else row["split"] for row in episodes]
+    sessions = {
+        name: {
+            row["collection_session_id"] for row, split in zip(episodes, result, strict=True) if split == name
+        }
+        for name in ("train", "validation", "test")
+    }
+    if any(
+        sessions[a] & sessions[b]
+        for a, b in (("train", "validation"), ("train", "test"), ("validation", "test"))
+    ):
+        raise ValueError("A collection session crosses split boundaries")
+    if not sessions["train"] or not sessions["validation"]:
+        raise ValueError("Training and validation must remain nonempty")
+    return result
 
 
 def valid_frames(row: dict) -> int:
@@ -98,7 +124,7 @@ def _write_jsonl(path: Path, rows: list[dict]) -> None:
     path.write_text("".join(json.dumps(row) + "\n" for row in rows))
 
 
-def prepare(raw_root: Path, output: Path, force: bool = False) -> dict:
+def prepare(raw_root: Path, output: Path, force: bool = False, test_sessions: tuple[str, ...] = ()) -> dict:
     if output.exists():
         if not force:
             raise FileExistsError(f"{output} exists; pass --force to replace this generated subset")
@@ -107,6 +133,7 @@ def prepare(raw_root: Path, output: Path, force: bool = False) -> dict:
     episodes = selection["episodes"]
     if not episodes or len({row["episode_index"] for row in episodes}) != len(episodes):
         raise ValueError("No episodes or duplicate source episode IDs")
+    memberships = assigned_splits(episodes, test_sessions)
     official_episodes = {row["episode_index"]: row for row in read_jsonl(raw_root / "meta/episodes.jsonl")}
     official_stats = {row["episode_index"]: row for row in read_jsonl(raw_root / "meta/episodes_stats.jsonl")}
     info = json.loads((raw_root / "meta/info.json").read_text())
@@ -162,7 +189,8 @@ def prepare(raw_root: Path, output: Path, force: bool = False) -> dict:
                 "source_episode_index": source_id,
                 "episode_uid": row["episode_uid"],
                 "source_task": row["source_task"],
-                "split": row["split"],
+                "source_split": row["split"],
+                "split": memberships[local_index],
                 "prompt": row["prompt"],
                 "collection_session_id": row["collection_session_id"],
                 "source_frames": row["frames"],
@@ -198,6 +226,7 @@ def prepare(raw_root: Path, output: Path, force: bool = False) -> dict:
                 "revision": selection["revision"],
                 "excluded_training_episodes": selection.get("excluded_training_episodes", []),
                 "exclusion_reason": selection.get("exclusion_reason"),
+                "test_sessions": list(test_sessions),
                 "policy_schema": schema,
                 "episodes": provenance,
             },
@@ -210,8 +239,8 @@ def prepare(raw_root: Path, output: Path, force: bool = False) -> dict:
 
     train_stats = [
         cast_stats_to_numpy(row["stats"])
-        for row, source in zip(stats_records, episodes, strict=True)
-        if source["split"] == "train"
+        for row, split in zip(stats_records, memberships, strict=True)
+        if split == "train"
     ]
     if not train_stats:
         raise ValueError("No training episodes to compute statistics")
@@ -231,8 +260,8 @@ def prepare(raw_root: Path, output: Path, force: bool = False) -> dict:
                     ],
                     dtype=np.float32,
                 )
-                for row in episodes
-                if row["split"] == "train"
+                for row, split in zip(episodes, memberships, strict=True)
+                if split == "train"
             ]
         )
         for quantile in (1, 10, 50, 90, 99):
@@ -242,8 +271,8 @@ def prepare(raw_root: Path, output: Path, force: bool = False) -> dict:
     stats_path = output / "meta/train_stats.json"
     stats_path.write_text(json.dumps(stats_serialized, indent=2, sort_keys=True) + "\n")
     splits = {
-        name: [i for i, row in enumerate(episodes) if row["split"] == name]
-        for name in ("train", "validation")
+        name: [i for i, split in enumerate(memberships) if split == name]
+        for name in ("train", "validation", "test")
     }
     split_manifest = {
         "source": {
@@ -251,7 +280,8 @@ def prepare(raw_root: Path, output: Path, force: bool = False) -> dict:
             "revision": None,
             "hands_on_revision": selection["revision"],
         },
-        "splits": {**splits, "test": []},
+        "splits": splits,
+        "test_sessions": list(test_sessions),
         "statistics": {
             "source_split": "train",
             "episodes": splits["train"],
@@ -269,8 +299,9 @@ def main() -> None:
     parser.add_argument("--raw-root", type=Path, default=DEFAULT_ROOT)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--force", action="store_true")
+    parser.add_argument("--test-session", action="append", default=[])
     args = parser.parse_args()
-    prepare(args.raw_root, args.output, args.force)
+    prepare(args.raw_root, args.output, args.force, tuple(args.test_session))
 
 
 if __name__ == "__main__":

@@ -28,15 +28,17 @@ nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv > "$job_roo
 "$HANDSON_PYTHON" -m examples.handson.t46_store_charger.cluster_check preflight \
   --job-root "$job_root" --data-root "$HANDSON_WORK_ROOT/datasets/v3" \
   --assets "$HANDSON_RUNTIME_ROOT/assets.json" --profile "$profile"
-"$HANDSON_PYTHON" -m lerobot.scripts.lerobot_train --config_path="$job_root/train_config.json" \
-  2>&1 | tee "$job_root/logs/phase1.log"
 if [[ "$profile" == 4090 ]]; then
+  "$HANDSON_PYTHON" -m lerobot.scripts.lerobot_train --config_path="$job_root/train_config.json" \
+    2>&1 | tee "$job_root/logs/phase1.log"
   "$HANDSON_PYTHON" -m lerobot.scripts.lerobot_train \
-    --config_path="$job_root/train/checkpoints/000003/pretrained_model/train_config.json" \
+    --config_path="$job_root/train/checkpoints/0000003/pretrained_model/train_config.json" \
     --resume=true --stop_after_steps=4 \
     2>&1 | tee "$job_root/logs/phase2-resume.log"
   "$HANDSON_PYTHON" -m examples.handson.t46_store_charger.cluster_check inference \
     --job-root "$job_root" --profile "$profile" 2>&1 | tee "$job_root/logs/inference.log"
+else
+  "$HANDSON_PYTHON" -m examples.handson.t46_store_charger.run_long --job-root "$job_root"
 fi
 "$HANDSON_PYTHON" -m examples.handson.t46_store_charger.cluster_check verify \
   --job-root "$job_root" --profile "$profile" 2>&1 | tee "$job_root/logs/verification.log"

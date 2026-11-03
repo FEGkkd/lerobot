@@ -65,13 +65,13 @@
         ]
       }
     },
-    "max_steps": 2000,
+    "max_steps": 1000000,
     "warmup_ratio": 0.05,
     "action_decode_transform": "none"
   },
   "batch_size": 4,
-  "steps": 2000,
-  "stop_after_steps": 2000,
+  "steps": 1000000,
+  "stop_after_steps": 1000000,
   "seed": 42,
   "num_workers": 4,
   "prefetch_factor": 2,
@@ -88,7 +88,7 @@
   "save_freq": 500,
   "log_freq": 10,
   "eval_steps": 100,
-  "max_eval_samples": 32,
+  "max_eval_samples": 0,
   "env_eval_freq": 0,
   "local_metrics": true,
   "wandb": {

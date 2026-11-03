@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from examples.handson.t46_store_charger.download_subset import select_episodes
-from examples.handson.t46_store_charger.prepare_dataset import remap_parquet, valid_frames
+from examples.handson.t46_store_charger.prepare_dataset import assigned_splits, remap_parquet, valid_frames
 
 
 def test_select_episodes_respects_official_split():
@@ -126,3 +126,25 @@ def test_complete_command_coverage_is_accepted():
         )
         == 128
     )
+
+
+def test_holdout_keeps_sessions_together_and_validation_unchanged():
+    rows = [
+        {"collection_session_id": "train-a", "split": "train"},
+        {"collection_session_id": "held-out", "split": "train"},
+        {"collection_session_id": "held-out", "split": "train"},
+        {"collection_session_id": "official-val", "split": "validation"},
+    ]
+    assert assigned_splits(rows, ("held-out",)) == ["train", "test", "test", "validation"]
+    for requested in (("official-val",), ("unknown",), ("held-out", "held-out"), ("held-out", "train-a")):
+        with pytest.raises(ValueError):
+            assigned_splits(rows, requested)
+
+
+def test_rejects_collection_session_leakage():
+    rows = [
+        {"collection_session_id": "same-session", "split": "train"},
+        {"collection_session_id": "same-session", "split": "validation"},
+    ]
+    with pytest.raises(ValueError, match="crosses split boundaries"):
+        assigned_splits(rows, ())
