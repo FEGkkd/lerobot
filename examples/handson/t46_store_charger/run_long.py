@@ -1,6 +1,7 @@
 """Run one bounded H200 job in 500-update resumable phases until manually stopped."""
 
 import argparse
+import datetime as dt
 import json
 import os
 import shutil
@@ -63,6 +64,7 @@ def run(job: Path) -> None:
     if config["steps"] != 1000000 or config["max_eval_samples"] != 0:
         raise ValueError("Expected the approved million-update horizon and full validation")
     started = time.monotonic()
+    started_at = dt.datetime.now(dt.UTC).isoformat()
     deadline = started + 11.5 * 3600
     completed = 0
     phase_seconds = 0.0
@@ -93,6 +95,14 @@ def run(job: Path) -> None:
             row for row in rows if row["event"] == "validation" and row["optimizer_updates"] % 500 == 0
         ]
         best = min(saved_validations, key=lambda row: row["metrics"]["loss"])
+        final_validation = saved_validations[-1]
+        matching_train = next(
+            row for row in reversed(rows) if row["event"] == "train" and row["optimizer_updates"] == completed
+        )
+        validation_seconds = (
+            dt.datetime.fromisoformat(final_validation["timestamp_utc"])
+            - dt.datetime.fromisoformat(matching_train["timestamp_utc"])
+        ).total_seconds()
         write(
             job / "best_checkpoint.json",
             {
@@ -106,11 +116,13 @@ def run(job: Path) -> None:
             job / "progress.json",
             {
                 "status": "phase_passed",
+                "job_started_at_utc": started_at,
                 "completed_updates": completed,
                 "checkpoint": state,
                 "phase_seconds": phase_seconds,
                 "elapsed_seconds": time.monotonic() - started,
                 "last_validation_loss": saved_validations[-1]["metrics"]["loss"],
+                "last_validation_seconds": validation_seconds,
                 "test_evaluated": False,
             },
         )

@@ -42,3 +42,7 @@ else
 fi
 "$HANDSON_PYTHON" -m examples.handson.t46_store_charger.cluster_check verify \
   --job-root "$job_root" --profile "$profile" 2>&1 | tee "$job_root/logs/verification.log"
+if [[ "$profile" == h200 ]]; then
+  "$HANDSON_PYTHON" -m examples.handson.t46_store_charger.evaluate_test --job-root "$job_root" \
+    2>&1 | tee "$job_root/logs/final-test.log"
+fi
