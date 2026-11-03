@@ -17,7 +17,7 @@ TASK_DIR = Path(__file__).parents[1]
 
 
 def test_train_and_smoke_configs_parse_with_current_cli_schema():
-    for name, steps, batch_size in (("train_config.json", 2000, 4), ("smoke_config.json", 3, 1)):
+    for name, steps, batch_size in (("train_config.json", 1000000, 4), ("smoke_config.json", 3, 1)):
         config = draccus.parse(TrainPipelineConfig, args=[f"--config_path={TASK_DIR / name}"])
         assert isinstance(config.policy, GrootConfig)
         assert config.steps == steps and config.batch_size == batch_size
