@@ -27,6 +27,19 @@ def observation_only_batch(batch: dict) -> dict:
     return {key: value for key, value in batch.items() if key.startswith("observation.") or key == "task"}
 
 
+def validate_inference_inputs(packed: dict) -> None:
+    mask = packed["action_mask"]
+    # transition_to_batch retains an action=None placeholder for observation-only input.
+    if (
+        packed.get("action") is not None
+        or mask.ndim != 2
+        or mask.shape[0] != 1
+        or mask.shape[1] < 16
+        or not (mask[:, :16] == 1).all()
+    ):
+        raise ValueError("Observation-only inference must enable the full action horizon")
+
+
 def read(path: Path) -> dict:
     return json.loads(path.read_text())
 
@@ -252,14 +265,7 @@ def inference(job: Path) -> None:
     with torch.inference_mode():
         packed = pre(batch)
         mask = packed["action_mask"]
-        if (
-            "action" in packed
-            or mask.ndim != 2
-            or mask.shape[0] != 1
-            or mask.shape[1] < 16
-            or not (mask[:, :16] == 1).all()
-        ):
-            raise ValueError("Observation-only inference must enable the full action horizon")
+        validate_inference_inputs(packed)
         action = post(policy.predict_action_chunk(packed))
     if list(action.shape) != [1, 16, 52] or not torch.isfinite(action).all():
         raise ValueError("Restored-policy decoded absolute actions are invalid")

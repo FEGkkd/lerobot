@@ -1,9 +1,11 @@
 from pathlib import Path
 
 import draccus
+import pytest
 import torch
 
 import lerobot.policies  # noqa: F401 -- register GrootConfig for draccus
+from examples.handson.t46_store_charger.cluster_check import validate_inference_inputs
 from lerobot.configs.train import TrainPipelineConfig
 from lerobot.lerobot_types import TransitionKey
 from lerobot.policies.groot.configuration_groot import GrootConfig
@@ -12,6 +14,7 @@ from lerobot.policies.groot.processor_groot import (
     GrootN17PackInputsStep,
     _transform_n1_7_image_for_vlm_torch,
 )
+from lerobot.processor.converters import transition_to_batch
 
 TASK_DIR = Path(__file__).parents[1]
 
@@ -104,3 +107,10 @@ def test_observation_only_pack_enables_the_full_inference_horizon():
     )
     mask = packed[TransitionKey.COMPLEMENTARY_DATA]["action_mask"]
     assert mask.shape == (1, 50) and mask[:, :16].all() and not mask[:, 16:].any()
+    flattened = transition_to_batch(packed)
+    assert "action" in flattened and flattened["action"] is None
+    validate_inference_inputs(flattened)
+    with pytest.raises(ValueError, match="Observation-only"):
+        validate_inference_inputs({**flattened, "action": torch.zeros(1, 16, 52)})
+    with pytest.raises(ValueError, match="full action horizon"):
+        validate_inference_inputs({"action": None, "action_mask": torch.zeros(1, 50)})
